@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
   type StyleProp,
+  type TextInputInstance,
   type TextInputProps,
   type TextProps,
   type TextStyle,
@@ -152,7 +153,7 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
   return <View style={base}>{children}</View>;
 }
 
-export const Input = forwardRef<TextInput, TextInputProps & { label?: string; error?: string | null }>(function Input({ label, error, style, ...rest }, ref) {
+export const Input = forwardRef<TextInputInstance, TextInputProps & { label?: string; error?: string | null }>(function Input({ label, error, style, ...rest }, ref) {
   return (
     <View style={{ marginBottom: 12 }}>
       {label && <T v="label" style={{ marginBottom: 6 }}>{label}</T>}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, TextInput, View, type TextInputInstance } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradientFallback } from '../components/Hero';
@@ -16,7 +16,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
-  const otpRef = useRef<TextInput>(null);
+  const otpRef = useRef<TextInputInstance>(null);
 
   useEffect(() => {
     if (resendIn <= 0) return;

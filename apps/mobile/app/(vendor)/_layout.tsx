@@ -12,10 +12,10 @@ export default function VendorTabs() {
         tabBarLabelStyle: { fontFamily: 'Poppins_500Medium', fontSize: 11 },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Orders', tabBarIcon: ({ color, size }) => <Ionicons name="cube" color={color} size={size} /> }} />
-      <Tabs.Screen name="rates" options={{ title: 'Rates', tabBarIcon: ({ color, size }) => <Ionicons name="pricetags" color={color} size={size} /> }} />
-      <Tabs.Screen name="ledger" options={{ title: 'Payments', tabBarIcon: ({ color, size }) => <Ionicons name="wallet" color={color} size={size} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Me', tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} /> }} />
+      <Tabs.Screen name="index" options={{ title: 'Orders', tabBarIcon: ({ color, size }) => <Ionicons name="cube" color={color as string} size={size} /> }} />
+      <Tabs.Screen name="rates" options={{ title: 'Rates', tabBarIcon: ({ color, size }) => <Ionicons name="pricetags" color={color as string} size={size} /> }} />
+      <Tabs.Screen name="ledger" options={{ title: 'Payments', tabBarIcon: ({ color, size }) => <Ionicons name="wallet" color={color as string} size={size} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Me', tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color as string} size={size} /> }} />
     </Tabs>
   );
 }

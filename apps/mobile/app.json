@@ -27,7 +27,10 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#fbf6ea"
       },
-      "permissions": ["CAMERA", "POST_NOTIFICATIONS"]
+      "permissions": [
+        "CAMERA",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -45,7 +48,10 @@
         {
           "cameraPermission": "Take a photo of items returned at the door or reported damaged."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": false

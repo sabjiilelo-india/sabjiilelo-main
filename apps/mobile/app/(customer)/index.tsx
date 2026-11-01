@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View, type ScrollViewInstance } from 'react-native';
 import { router } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +25,7 @@ export default function Home() {
   const { area, pincode } = useShop();
   const q = useQuery({ queryKey: qk.catalogHome(area?.id ?? ''), queryFn: () => api.catalog.home(area!.id), enabled: !!area });
   const [slide, setSlide] = useState(0);
-  const bannerRef = useRef<ScrollView>(null);
+  const bannerRef = useRef<ScrollViewInstance>(null);
   const banners = q.data?.banners ?? [];
   useEffect(() => {
     if (banners.length < 2) return;

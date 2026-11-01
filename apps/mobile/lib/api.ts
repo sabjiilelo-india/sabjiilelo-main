@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { storage } from './storage';
 import Constants from 'expo-constants';
 import { createApi, type TokenStore } from '@sabjiilelo/api-client';
 import type { AuthResponse } from '@sabjiilelo/shared';
@@ -23,15 +23,15 @@ const listeners = new Set<(auth: AuthResponse | null) => void>();
 
 export const tokenStore: TokenStore = {
   getAccess: () => accessToken,
-  getRefresh: () => SecureStore.getItemAsync(REFRESH_KEY),
+  getRefresh: () => storage.get(REFRESH_KEY),
   async save(auth) {
     accessToken = auth.accessToken;
-    await SecureStore.setItemAsync(REFRESH_KEY, auth.refreshToken);
+    await storage.set(REFRESH_KEY, auth.refreshToken);
     listeners.forEach((l) => l(auth));
   },
   async clear() {
     accessToken = null;
-    await SecureStore.deleteItemAsync(REFRESH_KEY);
+    await storage.remove(REFRESH_KEY);
     listeners.forEach((l) => l(null));
   },
 };

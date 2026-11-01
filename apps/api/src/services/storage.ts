@@ -8,8 +8,11 @@ export const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
 /** The repo-level /public folder (the API runs from apps/api). Override with BRAND_ASSETS_DIR in deployments. */
 export const BRAND_ASSETS_DIR = process.env.BRAND_ASSETS_DIR ?? path.resolve(process.cwd(), '../../public');
 
-const useCloudinary = !!env.CLOUDINARY_URL;
-if (useCloudinary) cloudinary.config({ secure: true });
+const useCloudinary = env.cloudinaryEnabled;
+if (useCloudinary) {
+  if (env.CLOUDINARY_URL) cloudinary.config({ secure: true });
+  else cloudinary.config({ cloud_name: env.CLOUDINARY_CLOUD_NAME, api_key: env.CLOUDINARY_API_KEY, api_secret: env.CLOUDINARY_API_SECRET, secure: true });
+}
 
 const EXT: Record<string, string> = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 export const ALLOWED_IMAGE_TYPES = Object.keys(EXT);

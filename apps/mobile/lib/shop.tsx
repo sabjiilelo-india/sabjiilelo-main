@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { storage } from './storage';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
@@ -25,7 +25,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [pincode, setPincode] = useState<string | null>(null);
 
   useEffect(() => {
-    SecureStore.getItemAsync(KEY)
+    storage.get(KEY)
       .then((raw) => {
         if (!raw) return;
         const saved = JSON.parse(raw) as { area: AreaRef; pincode: string };
@@ -39,7 +39,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const setLocation = useCallback((a: AreaRef, pin: string) => {
     setArea(a);
     setPincode(pin);
-    SecureStore.setItemAsync(KEY, JSON.stringify({ area: a, pincode: pin })).catch(() => undefined);
+    storage.set(KEY, JSON.stringify({ area: a, pincode: pin })).catch(() => undefined);
   }, []);
 
   const value = useMemo(() => ({ ready, area, pincode, setLocation }), [ready, area, pincode, setLocation]);
