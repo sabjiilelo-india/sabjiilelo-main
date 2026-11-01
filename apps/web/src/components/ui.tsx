@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Loader2, X } from 'lucide-react';
 import clsx from 'clsx';
@@ -262,24 +263,27 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
     };
   }, [open, onClose]);
   if (!open) return null;
-  return (
+  // Portal to <body>: an animated (transformed) ancestor would otherwise trap the fixed overlay
+  // inside itself, clipping the dialog and breaking its scrolling.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={onClose}>
       <div
         role="dialog"
         aria-modal="true"
-        className={clsx('flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-lift sm:rounded-2xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}
+        className={clsx('dialog-in flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-lift sm:max-h-[88vh] sm:rounded-3xl', wide ? 'sm:max-w-3xl' : 'sm:max-w-lg')}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-5 py-4">
           <h2 className="text-lg">{title}</h2>
           <button onClick={onClose} className="rounded-lg p-1 text-muted hover:bg-beige" aria-label="Close">
             <X size={20} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
+        {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-line bg-white px-5 py-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

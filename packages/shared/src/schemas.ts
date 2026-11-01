@@ -30,7 +30,7 @@ export const orderStatusSchema = enumOf(OrderStatus);
 export const otpRequestSchema = z.object({ phone: phoneSchema });
 export const otpVerifySchema = z.object({
   phone: phoneSchema,
-  code: z.string().trim().regex(/^\d{4,6}$/, 'Enter the OTP'),
+  code: z.string().trim().regex(/^\d{4}$/, 'Enter the 4-digit OTP'),
   client: z.enum(['app', 'web']).default('web'),
 });
 export const adminLoginSchema = z.object({ username: z.string().trim().min(1), password: z.string().min(1) });

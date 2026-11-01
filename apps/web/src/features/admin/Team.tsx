@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Star, Users } from 'lucide-react';
 import { qk } from '@sabjiilelo/api-client';
@@ -13,9 +14,20 @@ type StaffRole = (typeof STAFF_ROLES)[number];
 
 export function Staff() {
   const qc = useQueryClient();
-  const [role, setRole] = useState<Role | 'ALL'>('ALL');
+  const [params, setParams] = useSearchParams();
+  const initialRole = params.get('role') as StaffRole | null;
+  const addRole = params.get('add') as StaffRole | null;
+  const [role, setRole] = useState<Role | 'ALL'>(initialRole && STAFF_ROLES.includes(initialRole) ? initialRole : 'ALL');
   const q = useQuery({ queryKey: qk.staff(role), queryFn: () => api.staff.list(role === 'ALL' ? undefined : role) });
-  const [editing, setEditing] = useState<StaffUser | 'new' | null>(null);
+  const [editing, setEditing] = useState<StaffUser | 'new' | null>(addRole && STAFF_ROLES.includes(addRole) ? 'new' : null);
+  const [newRole, setNewRole] = useState<StaffRole>(addRole && STAFF_ROLES.includes(addRole) ? addRole : 'DELIVERY');
+  // Opening via ?add=VENDOR (dashboard shortcut) should not reopen the form after closing it.
+  useEffect(() => {
+    if (addRole) setParams((p) => (p.delete('add'), p), { replace: true });
+  }, []);
+  useEffect(() => {
+    setRole(initialRole && STAFF_ROLES.includes(initialRole) ? initialRole : 'ALL');
+  }, [initialRole]);
   const toggle = useMutation({
     mutationFn: (u: StaffUser) => api.staff.update(u.id, { status: u.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['staff'] }),
@@ -27,9 +39,27 @@ export function Staff() {
         title="Staff"
         subtitle="Add a phone number with a role. They can log in only after you add them."
         actions={
-          <Button icon={<Plus size={16} />} onClick={() => setEditing('new')}>
-            Add staff
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={<Plus size={16} />}
+              onClick={() => {
+                setNewRole('VENDOR');
+                setEditing('new');
+              }}
+            >
+              Add vendor
+            </Button>
+            <Button
+              icon={<Plus size={16} />}
+              onClick={() => {
+                setNewRole(role !== 'ALL' && STAFF_ROLES.includes(role as StaffRole) ? (role as StaffRole) : 'DELIVERY');
+                setEditing('new');
+              }}
+            >
+              Add staff
+            </Button>
+          </>
         }
       />
       <div className="mb-4">
@@ -80,17 +110,17 @@ export function Staff() {
           </tbody>
         </Table>
       )}
-      {editing && <StaffForm user={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
+      {editing && <StaffForm user={editing === 'new' ? null : editing} defaultRole={newRole} onClose={() => setEditing(null)} />}
     </>
   );
 }
 
-function StaffForm({ user, onClose }: { user: StaffUser | null; onClose: () => void }) {
+function StaffForm({ user, onClose, defaultRole = 'DELIVERY' }: { user: StaffUser | null; onClose: () => void; defaultRole?: StaffRole }) {
   const qc = useQueryClient();
   const [f, setF] = useState({
     phone: user?.phone ?? '',
     name: user?.name ?? '',
-    role: (user?.role ?? 'DELIVERY') as StaffRole,
+    role: (user?.role ?? defaultRole) as StaffRole,
     businessName: user?.vendor?.businessName ?? '',
     gstin: user?.vendor?.gstin ?? '',
     bankAccount: user?.vendor?.bankAccount ?? '',
@@ -108,7 +138,7 @@ function StaffForm({ user, onClose }: { user: StaffUser | null; onClose: () => v
     onError: (e) => toast.error((e as Error).message),
   });
   return (
-    <Modal open onClose={onClose} title={user ? 'Edit staff' : 'Add staff'} footer={<Button loading={m.isPending} onClick={() => m.mutate()}>Save</Button>}>
+    <Modal open onClose={onClose} title={user ? 'Edit staff' : f.role === 'VENDOR' ? 'Add vendor (supplier)' : 'Add staff'} footer={<Button loading={m.isPending} onClick={() => m.mutate()}>Save</Button>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Mobile number">
           <Input inputMode="numeric" maxLength={10} disabled={!!user} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value.replace(/\D/g, '') })} />

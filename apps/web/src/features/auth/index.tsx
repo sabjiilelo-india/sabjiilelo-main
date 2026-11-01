@@ -79,15 +79,18 @@ function OtpLogin() {
     }
   }
 
-  async function verify() {
+  async function verify(otp = code) {
+    if (otp.length !== 4) return setError('Enter the 4-digit OTP');
     setError(null);
     setBusy(true);
     try {
-      const u = await loginWithOtp(phone, code);
+      const u = await loginWithOtp(phone, otp);
       const next = params.get('next');
       nav(u.role === 'CUSTOMER' && next ? next : homeFor(u.role), { replace: true });
     } catch (e) {
       setError((e as Error).message);
+      setCode('');
+      otpRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -142,16 +145,33 @@ function OtpLogin() {
           <h1 className="text-2xl">Enter OTP</h1>
           <p className="mt-1 text-sm text-muted">Sent to +91 {phone}</p>
           {hint && <p className="mt-3 rounded-lg bg-light-green px-3 py-2 text-sm text-primary">{hint}</p>}
-          <Input
-            ref={otpRef}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="• • • •"
-            className="mt-6 text-center text-2xl tracking-[0.6em]"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-          />
+          {/* Four boxes backed by one input, so paste and SMS autofill keep working. */}
+          <label className="relative mt-6 grid cursor-text grid-cols-4 gap-3" onClick={() => otpRef.current?.focus()}>
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={`flex h-14 items-center justify-center rounded-2xl border-2 bg-white text-2xl font-bold text-ink transition ${
+                  code.length === i ? 'border-primary ring-4 ring-primary/10' : code[i] ? 'border-primary/40' : 'border-line'
+                }`}
+              >
+                {code[i] ?? ''}
+              </span>
+            ))}
+            <input
+              ref={otpRef}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={4}
+              aria-label="4-digit OTP"
+              className="absolute inset-0 opacity-0"
+              value={code}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                setCode(v);
+                if (v.length === 4 && !busy) verify(v);
+              }}
+            />
+          </label>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           <Button type="submit" size="lg" block className="mt-6" loading={busy} disabled={code.length < 4}>
             Verify & continue

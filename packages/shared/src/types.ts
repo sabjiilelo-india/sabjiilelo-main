@@ -488,6 +488,16 @@ export interface DashboardSummary {
   openIssues: number;
   onlineRiders: number;
   avgRating: number | null;
+  activeOrders: number;
+  /** Orders created today (any delivery slot) — what "new orders today" means to the store. */
+  placedToday: { count: number; valuePaise: number };
+  nextDay: { date: string; count: number; valuePaise: number };
+  last7Days: { date: string; orders: number; valuePaise: number }[];
+  catalog: { items: number; inStock: number; soldOut: number; notStocked: number };
+  team: { riders: number; vendors: number; staff: number };
+  pendingPos: number;
+  codPendingPaise: number;
+  ratingsCount: number;
 }
 
 export interface Notification {

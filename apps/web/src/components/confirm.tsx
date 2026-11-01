@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, HelpCircle, LogOut, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -72,7 +73,7 @@ export function ConfirmHost() {
   const Icon = ICONS[req.icon ?? (tone === 'danger' ? 'warning' : 'question')];
   const blocked = (req.typeToConfirm && text.trim().toUpperCase() !== req.typeToConfirm) || (req.input?.required && !text.trim());
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-ink/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={() => close(null)}>
       <div className="dialog-in w-full rounded-t-3xl bg-white p-6 shadow-lift sm:max-w-sm sm:rounded-3xl" role="alertdialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
         <div className={clsx('mx-auto flex h-14 w-14 items-center justify-center rounded-2xl', tone === 'danger' ? 'bg-danger/10 text-danger' : 'bg-light-green text-primary')}>
@@ -106,6 +107,7 @@ export function ConfirmHost() {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

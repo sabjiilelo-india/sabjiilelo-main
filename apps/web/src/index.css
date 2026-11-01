@@ -70,7 +70,8 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .fade-up {
-  animation: fade-up 0.35s ease-out both;
+  /* backwards (not both): no transform remains afterwards, so fixed-position children are not trapped */
+  animation: fade-up 0.35s ease-out backwards;
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;

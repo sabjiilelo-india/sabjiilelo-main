@@ -86,6 +86,7 @@ const STAFF_NAV: Group[] = [
     title: 'Supply',
     items: [
       { to: '/dashboard/supply/demand', label: 'Demand', icon: FileBarChart, perm: 'supply' },
+      { to: '/dashboard/staff?role=VENDOR', label: 'Vendors', icon: Store, perm: 'manageStaff' },
       { to: '/dashboard/supply/pos', label: 'Purchase orders', icon: PackageCheck, perm: 'supply' },
     ],
   },

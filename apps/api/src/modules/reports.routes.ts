@@ -180,21 +180,47 @@ reportsRouter.get('/dashboard', requirePermission('viewOrders'), async (req, res
   const areaId = scopeArea(req);
   const date = q(req, 'date') ? parse(ymdSchema, q(req, 'date')) : todayIST();
   const d = ymdToDate(date);
-  const [orders, slots, stock, pendingRefunds, openIssues, onlineRiders, rating] = await Promise.all([
+  const nextDate = addDays(date, 1);
+  const weekStart = addDays(date, -6);
+  // 'Placed today' is by IST calendar day of creation, independent of the delivery slot.
+  const dayStart = new Date(ymdToDate(todayIST()).getTime() - 330 * 60_000);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60_000);
+  const liveStatus = { notIn: ['PAYMENT_PENDING', 'CANCELLED'] } as Prisma.EnumOrderStatusFilter;
+
+  const [orders, slots, stock, items, pendingRefunds, openIssues, onlineRiders, rating, placed, next, week, team, pendingPos, cash] = await Promise.all([
     prisma.order.findMany({
       where: { areaId, slotDate: d, status: { not: 'PAYMENT_PENDING' } },
       select: { status: true, slotId: true, finalPayablePaise: true, channel: true },
     }),
     prisma.deliverySlot.findMany({ where: { areaId }, orderBy: { sort: 'asc' } }),
-    prisma.dailyStock.findMany({ where: { areaId, date: d }, include: { item: { select: { name: true, isActive: true } } } }),
+    prisma.dailyStock.findMany({ where: { areaId, date: d, item: { isActive: true } }, include: { item: { select: { name: true } } } }),
+    prisma.item.count({ where: { areaId, isActive: true } }),
     prisma.refund.count({ where: { order: { areaId }, status: 'REQUESTED' } }),
     prisma.issueReport.count({ where: { order: { areaId }, status: 'OPEN' } }),
     prisma.user.count({ where: { areaId, role: 'DELIVERY', isOnline: true, status: 'ACTIVE' } }),
-    prisma.rating.aggregate({ where: { order: { areaId } }, _avg: { stars: true } }),
+    prisma.rating.aggregate({ where: { order: { areaId } }, _avg: { stars: true }, _count: true }),
+    prisma.order.aggregate({ where: { areaId, createdAt: { gte: dayStart, lt: dayEnd }, status: liveStatus }, _count: true, _sum: { finalPayablePaise: true } }),
+    prisma.order.aggregate({ where: { areaId, slotDate: ymdToDate(nextDate), status: liveStatus }, _count: true, _sum: { finalPayablePaise: true } }),
+    prisma.order.findMany({
+      where: { areaId, slotDate: { gte: ymdToDate(weekStart), lte: d }, status: liveStatus },
+      select: { slotDate: true, finalPayablePaise: true },
+    }),
+    prisma.user.groupBy({ by: ['role'], where: { areaId, status: 'ACTIVE', role: { not: 'CUSTOMER' } }, _count: true }),
+    prisma.purchaseOrder.count({ where: { areaId, status: { in: ['SENT', 'ACCEPTED', 'ADJUSTED'] } } }),
+    prisma.riderCashDay.findMany({ where: { areaId, status: { not: 'SETTLED' } }, select: { codExpectedPaise: true, depositedPaise: true } }),
   ]);
+
   const live = orders.filter((o) => o.status !== 'CANCELLED');
   const statusCounts: DashboardSummary['statusCounts'] = {};
   for (const o of orders) statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1;
+  const last7Days: DashboardSummary['last7Days'] = [];
+  for (let day = weekStart; day <= date; day = addDays(day, 1)) {
+    const list = week.filter((o) => o.slotDate?.toISOString().slice(0, 10) === day);
+    last7Days.push({ date: day, orders: list.length, valuePaise: list.reduce((s, o) => s + o.finalPayablePaise, 0) });
+  }
+  const roleCount = (r: string) => team.find((t) => t.role === r)?._count ?? 0;
+  const soldOut = stock.filter((r) => r.availableQty - r.reservedQty <= 0);
+
   const body: DashboardSummary = {
     date,
     ordersBySlot: [
@@ -204,11 +230,20 @@ reportsRouter.get('/dashboard', requirePermission('viewOrders'), async (req, res
     statusCounts,
     revenuePaise: live.reduce((s, o) => s + o.finalPayablePaise, 0),
     ordersCount: live.length,
-    soldOutItems: stock.filter((r) => r.item.isActive && r.availableQty - r.reservedQty <= 0).map((r) => ({ itemId: r.itemId, name: r.item.name })),
+    activeOrders: live.filter((o) => (ACTIVE_ORDER_STATUSES as readonly string[]).includes(o.status)).length,
+    soldOutItems: soldOut.map((r) => ({ itemId: r.itemId, name: r.item.name })),
     pendingRefunds,
     openIssues,
     onlineRiders,
     avgRating: rating._avg.stars,
+    ratingsCount: rating._count,
+    placedToday: { count: placed._count, valuePaise: placed._sum.finalPayablePaise ?? 0 },
+    nextDay: { date: nextDate, count: next._count, valuePaise: next._sum.finalPayablePaise ?? 0 },
+    last7Days,
+    catalog: { items, inStock: stock.length - soldOut.length, soldOut: soldOut.length, notStocked: Math.max(0, items - stock.length) },
+    team: { riders: roleCount('DELIVERY'), vendors: roleCount('VENDOR'), staff: team.reduce((s, t) => s + t._count, 0) },
+    pendingPos,
+    codPendingPaise: cash.reduce((s, c) => s + Math.max(0, c.codExpectedPaise - c.depositedPaise), 0),
   };
-  res.json({ ...body, activeOrders: live.filter((o) => (ACTIVE_ORDER_STATUSES as readonly string[]).includes(o.status)).length });
+  res.json(body);
 });

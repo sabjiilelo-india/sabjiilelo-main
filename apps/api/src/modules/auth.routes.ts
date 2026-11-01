@@ -87,8 +87,13 @@ authRouter.post('/refresh', async (req, res) => {
   if (!session || session.revokedAt || session.expiresAt < new Date()) throw unauthorized('Session expired');
   if (session.user.status === 'BLOCKED') throw forbidden('This account is blocked');
 
-  // Rotate: the old refresh token can never be used again.
-  await prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+  // Rotate, but keep the old token alive for a short grace window. A reload or a second tab can
+  // fire a refresh while another is in flight; without the window, whichever response the browser
+  // drops would leave it holding a dead cookie and log the user out. Logout still revokes immediately.
+  const grace = new Date(Date.now() + 60_000);
+  if (session.expiresAt > grace) {
+    await prisma.session.update({ where: { id: session.id }, data: { expiresAt: grace } });
+  }
   res.json(await issueTokens(session.userId, session.client, res));
 });
 

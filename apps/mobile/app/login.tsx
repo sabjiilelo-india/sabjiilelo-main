@@ -41,14 +41,17 @@ export default function Login() {
     }
   }
 
-  async function verify() {
+  async function verify(otp = code) {
+    if (otp.length !== 4) return setError('Enter the 4-digit OTP');
     setError(null);
     setBusy(true);
     try {
-      await login(phone, code);
+      await login(phone, otp);
       router.replace('/');
     } catch (e) {
       setError((e as Error).message);
+      setCode('');
+      otpRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -103,19 +106,42 @@ export default function Login() {
                   <T style={{ color: colors.primary }}>{hint}</T>
                 </View>
               )}
-              <Input
+              {/* Four boxes backed by one hidden input, so SMS autofill still works. */}
+              <Pressable onPress={() => otpRef.current?.focus()} style={{ flexDirection: 'row', gap: 12, marginTop: 20, marginBottom: 14 }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <View
+                    key={i}
+                    style={{
+                      flex: 1,
+                      height: 60,
+                      borderRadius: 16,
+                      borderWidth: 2,
+                      borderColor: code.length === i ? colors.primary : code[i] ? '#86b79b' : colors.line,
+                      backgroundColor: '#fff',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <T style={{ fontFamily: font.bold, fontSize: 26, color: colors.ink }}>{code[i] ?? ''}</T>
+                  </View>
+                ))}
+              </Pressable>
+              <TextInput
                 ref={otpRef}
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
                 autoComplete="sms-otp"
-                maxLength={6}
-                placeholder="• • • •"
+                maxLength={4}
                 value={code}
-                onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
-                style={{ fontSize: 24, letterSpacing: 12, textAlign: 'center', marginTop: 20, height: 58 }}
+                onChangeText={(t) => {
+                  const v = t.replace(/\D/g, '').slice(0, 4);
+                  setCode(v);
+                  if (v.length === 4 && !busy) verify(v);
+                }}
+                style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }}
               />
               {error && <T style={{ color: colors.danger, marginBottom: 8 }}>{error}</T>}
-              <Button title="Verify & continue" size="lg" loading={busy} disabled={code.length < 4} onPress={verify} />
+              <Button title="Verify & continue" size="lg" loading={busy} disabled={code.length !== 4} onPress={() => verify()} />
               <Pressable disabled={resendIn > 0} onPress={send} style={{ marginTop: 16, alignItems: 'center' }}>
                 <T style={{ color: resendIn > 0 ? colors.muted : colors.primary }}>{resendIn > 0 ? `Resend OTP in ${resendIn}s` : 'Resend OTP'}</T>
               </Pressable>
