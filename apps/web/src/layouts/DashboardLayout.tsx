@@ -119,7 +119,9 @@ export function DashboardLayout() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const loc = useLocation();
-  useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => {
+    setOpen(false);
+  }, [loc.pathname]);
   const notes = useQuery({ queryKey: qk.notifications, queryFn: () => api.notifications.list(), enabled: user?.role !== 'SUPERADMIN', refetchInterval: 60_000 });
 
   if (!user) return null;

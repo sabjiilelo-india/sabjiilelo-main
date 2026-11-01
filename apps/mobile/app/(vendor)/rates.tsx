@@ -12,7 +12,9 @@ export default function Rates() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: qk.vendorRates(date), queryFn: () => api.vendor.rates(date) });
   const [edits, setEdits] = useState<Record<string, string>>({});
-  useEffect(() => setEdits({}), [q.dataUpdatedAt]);
+  useEffect(() => {
+    setEdits({});
+  }, [q.dataUpdatedAt]);
   const save = useMutation({
     mutationFn: () =>
       api.vendor.saveRates({

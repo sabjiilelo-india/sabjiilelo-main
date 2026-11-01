@@ -15,7 +15,9 @@ export function StockBoard() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState('');
   const [waste, setWaste] = useState<{ itemId: string; name: string; unitType: UnitType } | null>(null);
-  useEffect(() => setEdits({}), [date]);
+  useEffect(() => {
+    setEdits({});
+  }, [date]);
 
   const rows = useMemo(() => (q.data?.rows ?? []).filter((r) => r.name.toLowerCase().includes(filter.toLowerCase())), [q.data, filter]);
   const save = useMutation({

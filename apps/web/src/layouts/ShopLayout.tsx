@@ -24,7 +24,10 @@ export function ShopLayout() {
   useEffect(() => {
     if (!area) setLocOpen(true);
   }, [area]);
-  useEffect(() => window.scrollTo(0, 0), [loc.pathname]);
+  // Block body on purpose: newer Chrome returns a Promise from scrollTo, which React would treat as a cleanup.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [loc.pathname]);
 
   const showCartBar = cart.itemCount > 0 && !['/cart', '/checkout'].includes(loc.pathname);
 

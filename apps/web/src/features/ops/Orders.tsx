@@ -44,7 +44,9 @@ export function OrdersBoard() {
   const slots = useQuery({ queryKey: qk.manageSlots, queryFn: api.manage.slots });
   const filters = { date, status, slotId, q: search, page };
   const q = useQuery({ queryKey: qk.opsOrders(filters), queryFn: () => api.ops.orders({ ...filters, pageSize: 50 }), refetchInterval: 30_000 });
-  useEffect(() => setSelected([]), [date, status, slotId, page]);
+  useEffect(() => {
+    setSelected([]);
+  }, [date, status, slotId, page]);
   const set = (k: string, v: string) => {
     const p = new URLSearchParams(params);
     if (v) p.set(k, v);
