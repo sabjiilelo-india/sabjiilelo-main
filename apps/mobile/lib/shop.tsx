@@ -76,6 +76,8 @@ export function useCart() {
       toast((e as Error).message);
     },
     onSuccess: (cart) => qc.setQueryData(key, cart),
+    // Any cached checkout total is now out of date.
+    onSettled: () => qc.invalidateQueries({ queryKey: ['me', 'quote'] }),
   });
 
   return {

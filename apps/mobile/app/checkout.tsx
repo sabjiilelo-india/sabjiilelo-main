@@ -28,7 +28,7 @@ export default function Checkout() {
     if (!addressId && usable.length) setAddressId((usable.find((a) => a.isDefault) ?? usable[0]!).id);
   }, [usable, addressId]);
 
-  const quote = useQuery({ queryKey: qk.quote(addressId ?? '', coupon), queryFn: () => api.me.quote(addressId!, coupon), enabled: !!addressId });
+  const quote = useQuery({ queryKey: qk.quote(addressId ?? '', coupon), queryFn: () => api.me.quote(addressId!, coupon), enabled: !!addressId, staleTime: 0, gcTime: 0, refetchOnMount: 'always' });
   useEffect(() => {
     if (quote.data && (!slot || !quote.data.slots.some((s) => s.slotId === slot.slotId && s.date === slot.date && s.available))) {
       setSlot(quote.data.slots.find((s) => s.available) ?? null);

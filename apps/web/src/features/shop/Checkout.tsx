@@ -65,6 +65,9 @@ export function CheckoutPage() {
   }, [usable, addressId]);
 
   const quote = useQuery({
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
     queryKey: qk.quote(addressId ?? '', coupon),
     queryFn: () => api.me.quote(addressId!, coupon),
     enabled: !!addressId,

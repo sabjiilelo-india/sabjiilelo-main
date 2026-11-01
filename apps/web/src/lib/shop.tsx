@@ -103,6 +103,8 @@ export function useCart() {
       toast.error((err as Error).message);
     },
     onSuccess: (cart) => qc.setQueryData(qk.cart(area?.id ?? ''), cart),
+    // Any cached checkout total is now out of date.
+    onSettled: () => qc.invalidateQueries({ queryKey: ['me', 'quote'] }),
   });
 
   const qtyOf = (variantId: string) => query.data?.lines.find((l) => l.variantId === variantId)?.qty ?? 0;
