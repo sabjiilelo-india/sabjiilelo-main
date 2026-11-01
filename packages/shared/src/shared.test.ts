@@ -14,6 +14,9 @@ import {
   slotCutoff,
   toBaseQty,
   addDays,
+  appPathFor,
+  notificationTarget,
+  webPathFor,
   dayOfWeek,
 } from './index';
 
@@ -110,5 +113,20 @@ describe('schemas', () => {
     expect(phoneSchema.parse('+91 98765 43210')).toBe('9876543210');
     expect(phoneSchema.safeParse('12345').success).toBe(false);
     expect(phoneSchema.safeParse('5876543210').success).toBe(false);
+  });
+});
+
+describe('notification routing', () => {
+  it('points each notification at the right screen for the viewer', () => {
+    expect(notificationTarget({ orderId: 'o1' })).toEqual({ kind: 'order', id: 'o1' });
+    expect(notificationTarget({ poId: 'p1' })).toEqual({ kind: 'po', id: 'p1' });
+    expect(notificationTarget({ screen: 'deliveries' })).toEqual({ kind: 'deliveries' });
+    expect(notificationTarget(null)).toBeNull();
+    expect(webPathFor('CUSTOMER', { kind: 'order', id: 'o1' })).toBe('/orders/o1');
+    expect(webPathFor('MANAGER', { kind: 'order', id: 'o1' })).toBe('/dashboard/orders/o1');
+    expect(webPathFor('VENDOR', { kind: 'po', id: 'p1' })).toBe('/dashboard/vendor/orders/p1');
+    expect(appPathFor('DELIVERY', { kind: 'order', id: 'o1' })).toBe('/delivery/o1');
+    expect(appPathFor('CUSTOMER', { kind: 'order', id: 'o1' })).toBe('/order/o1');
+    expect(appPathFor('VENDOR', { kind: 'po', id: 'p1' })).toBe('/vendor-po/p1');
   });
 });

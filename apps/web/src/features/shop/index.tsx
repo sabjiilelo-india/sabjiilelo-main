@@ -65,6 +65,6 @@ export default function Shop({ page }: { page: Page }) {
     case 'notifications':
       return <NotificationsPage />;
     case 'staff-notifications':
-      return <NotificationsPage orderBase="/dashboard/orders" />;
+      return <NotificationsPage />;
   }
 }

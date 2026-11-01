@@ -14,6 +14,7 @@ import { ShopProvider } from '../lib/shop';
 import { ToastHost } from '../components/toast';
 import { CartButton, StackBar } from '../components/AppBar';
 import { ConfirmHost } from '../components/confirm';
+import { NotificationRouter } from '../components/NotificationRouter';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -70,6 +71,7 @@ export default function RootLayout() {
                 <Stack.Screen name="legal/[doc]" options={{ title: 'Terms & conditions' }} />
                 <Stack.Screen name="about" options={{ title: 'About' }} />
               </Stack>
+              <NotificationRouter />
               <ToastHost />
               <ConfirmHost />
             </ShopProvider>

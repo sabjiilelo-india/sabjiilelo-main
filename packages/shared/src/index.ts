@@ -8,3 +8,4 @@ export * from './schemas';
 export * from './types';
 export * from './produce';
 export * from './content';
+export * from './notifications';

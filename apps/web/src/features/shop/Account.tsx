@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { qk } from '@sabjiilelo/api-client';
-import { APP_VERSION, PRIVACY, SUPPORT, TERMS, type Address } from '@sabjiilelo/shared';
+import { APP_VERSION, PRIVACY, SUPPORT, TERMS, notificationTarget, webPathFor, type Address } from '@sabjiilelo/shared';
 import { api, tokenStore } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { Badge, Button, Card, EmptyState, Field, Input, PageLoader, Pager, Toggle } from '../../components/ui';
@@ -412,7 +412,8 @@ export function AboutPage() {
   return user?.role === 'CUSTOMER' ? <AccountShell title="About">{inner}</AccountShell> : <div className="mx-auto max-w-3xl">{inner}</div>;
 }
 
-export function NotificationsPage({ orderBase = '/orders' }: { orderBase?: string }) {
+export function NotificationsPage() {
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: [...qk.notifications, page], queryFn: () => api.notifications.list(page) });
@@ -439,7 +440,7 @@ export function NotificationsPage({ orderBase = '/orders' }: { orderBase?: strin
       ) : (
         <Card className="divide-y divide-line/70 overflow-hidden">
           {q.data.data.map((n) => {
-            const orderId = (n.data as { orderId?: string } | null)?.orderId;
+            const href = webPathFor(user?.role, notificationTarget(n.data));
             const body = (
               <div className={clsx('flex gap-3 p-4 transition', n.readAt ? 'hover:bg-cream/50' : 'bg-mint/60 hover:bg-mint')}>
                 <span className={clsx('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', n.readAt ? 'bg-cream text-muted' : 'bg-primary text-white')}>
@@ -452,8 +453,8 @@ export function NotificationsPage({ orderBase = '/orders' }: { orderBase?: strin
                 </div>
               </div>
             );
-            return orderId ? (
-              <Link key={n.id} to={`${orderBase}/${orderId}`} className="block">
+            return href ? (
+              <Link key={n.id} to={href} className="block">
                 {body}
               </Link>
             ) : (
