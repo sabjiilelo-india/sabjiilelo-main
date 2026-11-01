@@ -1,12 +1,14 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
+import rateLimit from 'express-rate-limit';
 import type { Prisma } from '@prisma/client';
-import { pincodeSchema, ymdSchema, type CatalogHome, type CatalogItem } from '@sabjiilelo/shared';
+import { pincodeSchema, ymdSchema, type CatalogHome, type CatalogItem, type LocateResult } from '@sabjiilelo/shared';
 import { prisma } from '../lib/prisma';
 import { param, parse, q } from '../lib/http';
-import { badRequest, notFound } from '../lib/errors';
+import { AppError, badRequest, notFound } from '../lib/errors';
 import { itemInclude, toBanner, toCategory, toItem } from '../lib/serializers';
 import { catalogDate, slotOptions } from '../services/slots';
 import { remainingByItem } from '../services/stock';
+import { reverseGeocode } from '../services/geocode';
 
 /** Public catalog. Customers browse without logging in; the area comes from their pincode. */
 export const catalogRouter = Router();
@@ -41,6 +43,36 @@ catalogRouter.get('/serviceability', async (req, res) => {
   if (!row || !row.area.isActive) return res.json({ serviceable: false, area: null });
   const { isActive: _ignored, ...area } = row.area;
   res.json({ serviceable: true, area });
+});
+
+// GPS position -> pincode -> delivery area. Rate limited because it calls a free public geocoder.
+const locateLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: true, legacyHeaders: false });
+function coord(req: Request, name: string, min: number, max: number) {
+  const raw = q(req, name);
+  const n = raw === undefined ? NaN : Number(raw);
+  if (!Number.isFinite(n) || n < min || n > max) throw badRequest(`Invalid ${name}`);
+  return n;
+}
+catalogRouter.get('/locate', locateLimiter, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const lat = coord(req, 'lat', -90, 90);
+  const lng = coord(req, 'lng', -180, 180);
+  let found;
+  try {
+    found = await reverseGeocode(lat, lng);
+  } catch {
+    throw new AppError(502, 'GEOCODER_UNAVAILABLE', 'Could not look up your location right now. Please enter your pincode instead.');
+  }
+  let area = null;
+  if (found.pincode) {
+    const row = await prisma.areaPincode.findUnique({
+      where: { pincode: found.pincode },
+      include: { area: { select: { id: true, code: true, name: true, city: true, isActive: true } } },
+    });
+    if (row?.area.isActive) area = { id: row.area.id, code: row.area.code, name: row.area.name, city: row.area.city };
+  }
+  const body: LocateResult = { lat, lng, ...found, serviceable: !!area, area };
+  res.json(body);
 });
 
 catalogRouter.get('/home', async (req, res) => {

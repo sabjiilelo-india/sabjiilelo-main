@@ -29,7 +29,9 @@
       },
       "permissions": [
         "CAMERA",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -51,7 +53,13 @@
       ],
       "expo-image",
       "expo-splash-screen",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Sabjii Le Lo uses your location only to find your pincode and check delivery availability."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

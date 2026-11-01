@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { LocateFixed } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
 import type { Address } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { GeoError, locateMe } from '../../lib/geo';
 import { Button, Field, Input, Modal, Toggle } from '../../components/ui';
 import { toast } from '../../components/toast';
 
@@ -20,10 +22,27 @@ export function AddressForm({ open, onClose, address, onSaved }: { open: boolean
     pincode: address?.pincode ?? '',
     isDefault: address?.isDefault ?? false,
   });
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  // Fill pincode, city and (if still empty) the street from where the customer is.
+  async function fillFromGps() {
+    setLocating(true);
+    try {
+      const r = await locateMe();
+      setCoords({ lat: r.lat, lng: r.lng });
+      setForm((f) => ({ ...f, pincode: r.pincode ?? f.pincode, city: r.city ?? f.city, line1: f.line1 || r.line1 || '' }));
+      toast.success('Location filled in', 'Add your house / flat number to finish.');
+    } catch (e) {
+      toast.error(e instanceof GeoError ? e.message : 'Could not get your location');
+    } finally {
+      setLocating(false);
+    }
+  }
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const save = useMutation({
-    mutationFn: () => (address ? api.me.updateAddress(address.id, form) : api.me.createAddress(form)),
+    mutationFn: () => (address ? api.me.updateAddress(address.id, { ...form, ...coords }) : api.me.createAddress({ ...form, ...coords })),
     onSuccess: (a) => {
       qc.invalidateQueries({ queryKey: qk.addresses });
       if (!a.serviceable) toast.info("Saved. We don't deliver to this pincode yet.");
@@ -51,6 +70,9 @@ export function AddressForm({ open, onClose, address, onSaved }: { open: boolean
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
+        <Button className="sm:col-span-2" variant="secondary" icon={<LocateFixed size={16} />} loading={locating} onClick={fillFromGps}>
+          {locating ? 'Finding you…' : 'Use my current location'}
+        </Button>
         <div className="flex gap-2 sm:col-span-2">
           {['Home', 'Work', 'Other'].map((l) => (
             <button

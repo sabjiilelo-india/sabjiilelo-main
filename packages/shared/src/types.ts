@@ -126,6 +126,19 @@ export interface Banner {
   isActive: boolean;
 }
 
+/** Result of turning the phone's GPS position into a delivery location. */
+export interface LocateResult {
+  lat: number;
+  lng: number;
+  pincode: string | null;
+  city: string | null;
+  state: string | null;
+  line1: string | null;
+  displayName: string | null;
+  serviceable: boolean;
+  area: AreaRef | null;
+}
+
 export interface CatalogHome {
   area: AreaRef & { minOrderPaise: number; deliveryFeePaise: number; freeDeliveryAbovePaise: number };
   deliveryDate: string;

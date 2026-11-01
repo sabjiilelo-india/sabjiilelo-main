@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { GeoError, locateMe } from '../lib/geo';
 import { useShop } from '../lib/shop';
 import { Button, Chip, Input, Row, Screen, T, colors } from '../components/ui';
 import { toast } from '../components/toast';
@@ -26,9 +27,26 @@ export default function AddressForm() {
     pincode: existing?.pincode ?? pincode ?? '',
     isDefault: existing?.isDefault ?? false,
   });
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
+
+  // Fill pincode, city and (if still empty) the street from where the customer is standing.
+  async function fillFromGps() {
+    setLocating(true);
+    try {
+      const r = await locateMe();
+      setCoords({ lat: r.lat, lng: r.lng });
+      setF((s) => ({ ...s, pincode: r.pincode ?? s.pincode, city: r.city ?? s.city, line1: s.line1 || r.line1 || '' }));
+      toast.success('Location filled in', r.line1 ? 'Add your house / flat number' : 'Add your house number and street');
+    } catch (e) {
+      toast.error(e instanceof GeoError ? e.message : 'Could not get your location');
+    } finally {
+      setLocating(false);
+    }
+  }
   const save = useMutation({
-    mutationFn: () => (id ? api.me.updateAddress(id, f) : api.me.createAddress(f)),
+    mutationFn: () => (id ? api.me.updateAddress(id, { ...f, ...coords }) : api.me.createAddress({ ...f, ...coords })),
     onSuccess: (a) => {
       qc.invalidateQueries({ queryKey: qk.addresses });
       qc.invalidateQueries({ queryKey: ['me', 'quote'] });
@@ -41,6 +59,7 @@ export default function AddressForm() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen edges={[]}>
+        <Button title={locating ? 'Finding you…' : 'Use my current location'} icon="locate" variant="secondary" loading={locating} onPress={fillFromGps} style={{ marginBottom: 16 }} />
         <Row style={{ gap: 8, marginBottom: 14 }}>
           {['Home', 'Work', 'Other'].map((l) => (
             <Chip key={l} label={l} active={f.label === l} onPress={() => set('label')(l)} />

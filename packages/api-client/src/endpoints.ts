@@ -17,6 +17,7 @@ import type {
   DeliverySlot,
   DemandRow,
   IssueReport,
+  LocateResult,
   Item,
   LedgerEntry,
   Notification,
@@ -86,6 +87,7 @@ export function createEndpoints(http: Http) {
 
     catalog: {
       serviceability: (pincode: string) => http.get<{ serviceable: boolean; area: AreaRef | null }>('/catalog/serviceability', { pincode }),
+      locate: (lat: number, lng: number) => http.get<LocateResult>('/catalog/locate', { lat, lng }),
       home: (areaId: string) => http.get<CatalogHome>('/catalog/home', { areaId }),
       items: (areaId: string, opts: { categoryId?: string; q?: string; date?: string } = {}) =>
         http.get<{ date: string; items: CatalogItem[] }>('/catalog/items', { areaId, ...opts }),
