@@ -9,13 +9,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
 import {
   ISSUE_TYPE_LABEL,
-  ORDER_STATUS_LABEL,
-  TRACKING_STEPS,
   effectiveLineQty,
   formatDateLabel,
   formatINR,
   formatTime12,
-  trackingStepIndex,
   type IssueType,
   type OrderDetail,
 } from '@sabjiilelo/shared';
@@ -23,6 +20,7 @@ import { api, tokenStore } from '../../lib/api';
 import { startPayment } from '../../lib/payment';
 import { Badge, Button, Card, Chip, Divider, Empty, Loader, ProduceImage, Row, Screen, StatusBadge, T, colors, font } from '../../components/ui';
 import { PhotoPicker } from '../../components/PhotoPicker';
+import { OrderTracker } from '../../components/OrderTracker';
 import { toast } from '../../components/toast';
 
 const CANCEL_REASONS = ['Ordered by mistake', 'Need to change items', 'Will not be home', 'Other'];
@@ -51,7 +49,6 @@ export default function OrderScreen() {
   if (q.isLoading) return <Loader />;
   if (!q.data) return <Empty title="Order not found" />;
   const o = q.data;
-  const idx = trackingStepIndex(o.status);
   const effSubtotal = o.items.reduce((s, i) => s + i.pricePaise * effectiveLineQty(i), 0);
 
   return (
@@ -81,19 +78,7 @@ export default function OrderScreen() {
             <T style={{ color: colors.danger }}>Cancelled{o.cancelReason ? `: ${o.cancelReason}` : ''}</T>
           </View>
         ) : (
-          <Row style={{ marginTop: 18, alignItems: 'flex-start' }}>
-            {TRACKING_STEPS.map((s, i) => (
-              <View key={s} style={{ flex: 1, alignItems: 'center' }}>
-                {i > 0 && <View style={{ position: 'absolute', top: 12, right: '50%', width: '100%', height: 2, backgroundColor: i <= idx ? colors.primary : colors.line }} />}
-                <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: i <= idx ? colors.primary : colors.line, backgroundColor: i <= idx ? colors.primary : '#fff', alignItems: 'center', justifyContent: 'center' }}>
-                  {i <= idx && <Ionicons name="checkmark" size={14} color="#fff" />}
-                </View>
-                <T v="tiny" style={{ textAlign: 'center', marginTop: 4, color: i <= idx ? colors.primary : colors.muted }}>
-                  {ORDER_STATUS_LABEL[s]}
-                </T>
-              </View>
-            ))}
-          </Row>
+          <OrderTracker status={o.status} />
         )}
         {o.riderName && ['ASSIGNED', 'OUT_FOR_DELIVERY'].includes(o.status) && (
           <Row style={{ gap: 10, marginTop: 14, backgroundColor: colors.mint, padding: 10, borderRadius: 12 }}>

@@ -7,8 +7,9 @@ import { qk } from '@sabjiilelo/api-client';
 import { formatDateLabel, formatINR, formatTime12, type SlotOption } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { useShop } from '../../lib/shop';
-import { Badge, Button, Card, EmptyState, ErrorState, Input, Modal, PageLoader } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, ErrorState, Input, Modal, PageLoader, Spinner } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { createPortal } from 'react-dom';
 import { AddressForm } from './AddressForm';
 import { payWithRazorpay } from './payment';
 
@@ -309,6 +310,18 @@ export function CheckoutPage() {
 
       {addOpen && <AddressForm open onClose={() => setAddOpen(false)} onSaved={(a) => a.serviceable && a.areaId === area?.id && setAddressId(a.id)} />}
       {mockPay.modal}
+      {placing &&
+        createPortal(
+          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-ink/55 p-6 backdrop-blur-[2px]">
+            <div className="dialog-in flex w-full max-w-xs flex-col items-center rounded-3xl bg-white p-7 text-center shadow-lift">
+              <img src="/icons/truck.webp" alt="" className="h-20 w-20 object-contain" />
+              <Spinner className="mt-2" />
+              <h2 className="mt-3 text-lg">Placing your order…</h2>
+              <p className="mt-1 text-sm text-muted">This takes a few seconds. Please don't close this page.</p>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

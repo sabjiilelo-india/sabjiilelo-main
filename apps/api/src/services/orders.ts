@@ -178,14 +178,17 @@ function assertTransition(from: OrderStatus, to: OrderStatus, actor: Actor) {
 
 // ---------------------------------------------------------------- cart & quote
 
-async function cartLines(userId: string, areaId: string, date: string): Promise<CartLine[]> {
-  const rows = await prisma.cartItem.findMany({
-    where: { userId, variant: { item: { areaId } } },
-    include: { variant: { include: { item: true } } },
-    orderBy: { updatedAt: 'asc' },
-  });
-  const remaining = await remainingByItem(areaId, date, [...new Set(rows.map((r) => r.variant.itemId))]);
-  return rows.map((r) => {
+async function loadCart(userId: string, areaId: string, date: string) {
+  // The area's stock for the date is small, so fetch it alongside the cart instead of after it.
+  const [rows, remaining] = await Promise.all([
+    prisma.cartItem.findMany({
+      where: { userId, variant: { item: { areaId } } },
+      include: { variant: { include: { item: true } } },
+      orderBy: { updatedAt: 'asc' },
+    }),
+    remainingByItem(areaId, date),
+  ]);
+  const lines: CartLine[] = rows.map((r) => {
     const v = r.variant;
     return {
       variantId: v.id,
@@ -201,6 +204,11 @@ async function cartLines(userId: string, areaId: string, date: string): Promise<
       available: v.isActive && v.item.isActive && (remaining.get(v.itemId) ?? 0) >= v.baseQty * r.qty,
     };
   });
+  return { rows, lines };
+}
+
+async function cartLines(userId: string, areaId: string, date: string): Promise<CartLine[]> {
+  return (await loadCart(userId, areaId, date)).lines;
 }
 
 export async function getCart(userId: string, areaId: string, date: string) {
@@ -225,10 +233,12 @@ type CouponCheck = { coupon: Prisma.CouponGetPayload<object> | null; message: st
 async function checkCoupon(areaId: string, userId: string, code: string | null | undefined, subtotalPaise: number): Promise<CouponCheck> {
   if (!code) return { coupon: null, message: null };
   const today = ymdToDate(todayIST());
-  const c = await prisma.coupon.findUnique({ where: { areaId_code: { areaId, code } } });
+  const [c, mine] = await Promise.all([
+    prisma.coupon.findUnique({ where: { areaId_code: { areaId, code } } }),
+    prisma.couponRedemption.count({ where: { userId, coupon: { areaId, code } } }),
+  ]);
   if (!c || !c.isActive || c.validFrom > today || c.validTo < today) return { coupon: null, message: 'This coupon is not valid' };
   if (c.usageLimit != null && c.usedCount >= c.usageLimit) return { coupon: null, message: 'This coupon has been fully used' };
-  const mine = await prisma.couponRedemption.count({ where: { couponId: c.id, userId } });
   if (mine >= c.perUserLimit) return { coupon: null, message: 'You have already used this coupon' };
   if (subtotalPaise < c.minOrderPaise) return { coupon: null, message: `Add items worth ${formatINR(c.minOrderPaise - subtotalPaise)} more to use this coupon` };
   return { coupon: c, message: null };
@@ -255,13 +265,18 @@ export async function quote(userId: string, addressId: string, couponCode?: stri
 
 export async function placeOrder(customer: { id: string; name: string | null; phone: string }, input: PlaceOrderInput) {
   const { address, area } = await resolveAddress(customer.id, input.addressId);
-  const option = (await slotOptions(area.id, 3)).find((s) => s.slotId === input.slotId && s.date === input.slotDate);
-  if (!option || !option.available) throw badRequest('This delivery slot is no longer available. Please pick another.');
-  const slot = await prisma.deliverySlot.findUniqueOrThrow({ where: { id: input.slotId } });
+  // Independent reads go out together: each database round trip is slow, so fewer sequential waits matters.
+  const [slots, slot, cart] = await Promise.all([
+    slotOptions(area.id, 3),
+    prisma.deliverySlot.findUnique({ where: { id: input.slotId } }),
+    loadCart(customer.id, area.id, input.slotDate),
+  ]);
+  const option = slots.find((x) => x.slotId === input.slotId && x.date === input.slotDate);
+  if (!option || !option.available || !slot) throw badRequest('This delivery slot is no longer available. Please pick another.');
 
-  const lines = await cartLines(customer.id, area.id, input.slotDate);
+  const { rows, lines } = cart;
   if (!lines.length) throw badRequest('Your cart is empty');
-  const subtotal = lines.reduce((s, l) => s + l.pricePaise * l.qty, 0);
+  const subtotal = lines.reduce((sum, l) => sum + l.pricePaise * l.qty, 0);
   const { coupon, message } = await checkCoupon(area.id, customer.id, input.couponCode, subtotal);
   if (input.couponCode && !coupon) throw badRequest(message ?? 'Invalid coupon');
   const totals = computeTotals(lines, area, coupon);
@@ -274,8 +289,9 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
     needs.set(l.itemId, n);
   }
   const prepaid = input.paymentMode === 'RAZORPAY';
+  const actor = { id: customer.id, name: customer.name ?? 'Customer' };
 
-  const order = await prisma.$transaction(
+  const { order, items, event } = await prisma.$transaction(
     async (tx) => {
       await reserveStock(tx, area.id, input.slotDate, needs);
       await bookSlot(tx, slot.id, input.slotDate, slot.capacity);
@@ -286,8 +302,6 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
         if (!ok) throw badRequest('This coupon has been fully used');
       }
       const orderNo = await nextOrderNo(tx, area.id);
-      const items = await tx.itemVariant.findMany({ where: { id: { in: lines.map((l) => l.variantId) } }, include: { item: true } });
-      const byVariant = new Map(items.map((v) => [v.id, v]));
       const created = await tx.order.create({
         data: {
           orderNo,
@@ -321,59 +335,70 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
           couponCode: coupon?.code,
           note: input.note,
           placedAt: prepaid ? null : new Date(),
-          items: {
-            create: lines.map((l) => {
-              const v = byVariant.get(l.variantId)!;
-              return {
-                itemId: l.itemId,
-                variantId: l.variantId,
-                name: l.name,
-                variantLabel: l.variantLabel,
-                unitType: l.unitType,
-                baseQty: l.baseQty,
-                qty: l.qty,
-                pricePaise: l.pricePaise,
-                gstRate: v.item.gstRate,
-                hsnCode: v.item.hsnCode,
-                image: l.image,
-              };
-            }),
-          },
         },
       });
+      // One statement each for the lines, the timeline entry and the stock ledger.
+      const itemRows = await tx.orderItem.createManyAndReturn({
+        data: rows.map((r) => ({
+          orderId: created.id,
+          itemId: r.variant.itemId,
+          variantId: r.variant.id,
+          name: r.variant.item.name,
+          variantLabel: r.variant.label,
+          unitType: r.variant.item.unitType,
+          baseQty: r.variant.baseQty,
+          qty: r.qty,
+          pricePaise: r.variant.pricePaise,
+          gstRate: r.variant.item.gstRate,
+          hsnCode: r.variant.item.hsnCode,
+          image: r.variant.item.images[0] ?? null,
+        })),
+      });
       if (coupon) await tx.couponRedemption.create({ data: { couponId: coupon.id, userId: customer.id, orderId: created.id } });
-      await addEvent(tx, created.id, created.status, { id: customer.id, role: 'CUSTOMER', name: customer.name ?? 'Customer' });
-      for (const [itemId, n] of needs) {
-        await tx.stockMovement.create({ data: { areaId: area.id, itemId, type: 'SALE', qty: -n.qty, refType: 'Order', refId: created.id } });
-      }
+      const eventRow = await tx.orderEvent.create({ data: { orderId: created.id, status: created.status, actorId: actor.id, actorName: actor.name } });
+      await tx.stockMovement.createMany({
+        data: [...needs].map(([itemId, n]) => ({ areaId: area.id, itemId, type: 'SALE' as const, qty: -n.qty, refType: 'Order', refId: created.id })),
+      });
       await tx.cartItem.deleteMany({ where: { userId: customer.id, variantId: { in: lines.map((l) => l.variantId) } } });
-      return created;
+      return { order: created, items: itemRows, event: eventRow };
     },
-    { timeout: 20_000 },
+    { timeout: 30_000 },
   );
 
+  let payment: Prisma.PaymentGetPayload<object> | null = null;
   if (prepaid) {
     const rp = await gateway.createOrder(order.totalPaise, order.orderNo);
-    await prisma.payment.create({ data: { orderId: order.id, razorpayOrderId: rp.id, amountPaise: order.totalPaise } });
+    payment = await prisma.payment.create({ data: { orderId: order.id, razorpayOrderId: rp.id, amountPaise: order.totalPaise } });
   } else {
-    await notifyOrderPlaced(order.id);
+    // Confirmation pushes are not part of the customer's wait.
+    void notifyPlaced(order, slot.label).catch((err) => logger.warn({ err }, 'order notification failed'));
   }
-  const full = await loadOrder(order.id);
+
+  // Everything the response needs is already in hand, so skip re-reading the order.
+  const full: OrderFull = { ...order, items, events: [event], refunds: [], rating: null, issues: [], slot, rider: null, payments: payment ? [payment] : [] };
   return toOrderDetail(full, { id: customer.id, role: 'CUSTOMER' });
+}
+
+type PlacedOrder = { id: string; orderNo: string; customerId: string | null; areaId: string; totalPaise: number; paymentMode: string; slotDate: Date | null };
+
+async function notifyPlaced(o: PlacedOrder, slotLabel: string | null) {
+  const [ops] = await Promise.all([
+    prisma.user.findMany({ where: { areaId: o.areaId, role: { in: ['ADMIN', 'MANAGER'] }, status: 'ACTIVE' }, select: { id: true } }),
+    notify([o.customerId], {
+      title: 'Order placed 🎉',
+      body: `${o.orderNo} will arrive ${slotLabel?.toLowerCase() ?? ''} on ${ymd(o.slotDate)}. Total ${formatINR(o.totalPaise)}.`,
+      data: { orderId: o.id },
+    }),
+  ]);
+  await notify(
+    ops.map((u) => u.id),
+    { title: `New order ${o.orderNo}`, body: `${formatINR(o.totalPaise)} · ${o.paymentMode} · ${slotLabel ?? ''}`, data: { orderId: o.id } },
+  );
 }
 
 async function notifyOrderPlaced(orderId: string) {
   const o = await loadOrder(orderId);
-  await notify([o.customerId], {
-    title: 'Order placed 🎉',
-    body: `${o.orderNo} will arrive ${o.slot?.label.toLowerCase() ?? ''} on ${ymd(o.slotDate)}. Total ${formatINR(o.totalPaise)}.`,
-    data: { orderId },
-  });
-  const ops = await prisma.user.findMany({ where: { areaId: o.areaId, role: { in: ['ADMIN', 'MANAGER'] }, status: 'ACTIVE' }, select: { id: true } });
-  await notify(
-    ops.map((u) => u.id),
-    { title: `New order ${o.orderNo}`, body: `${formatINR(o.totalPaise)} · ${o.paymentMode} · ${o.slot?.label ?? ''}`, data: { orderId } },
-  );
+  await notifyPlaced(o, o.slot?.label ?? null);
 }
 
 /** Idempotent: called by the client verify call and by the Razorpay webhook. */

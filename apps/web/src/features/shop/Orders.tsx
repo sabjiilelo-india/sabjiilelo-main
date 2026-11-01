@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronRight, Download, PartyPopper, RefreshCw, Star } from 'lucide-react';
+import { Bike, Check, CheckCircle2, ChevronRight, Clock, Download, Home, PartyPopper, Receipt, RefreshCw, ShoppingBag, Star, ThumbsUp } from 'lucide-react';
 import clsx from 'clsx';
 import { qk } from '@sabjiilelo/api-client';
 import {
   ISSUE_TYPE_LABEL,
   ORDER_STATUS_LABEL,
+  TRACKING_HEADLINE,
   TRACKING_STEPS,
   effectiveLineQty,
   formatDateLabel,
@@ -64,26 +65,44 @@ export function OrdersPage() {
   );
 }
 
+const STEP_ICON = { PLACED: Receipt, CONFIRMED: ThumbsUp, PACKED: ShoppingBag, OUT_FOR_DELIVERY: Bike, DELIVERED: Home } as const;
+
 function Timeline({ order }: { order: OrderDetail }) {
   if (order.status === 'CANCELLED') {
     return <div className="rounded-xl bg-danger/10 p-4 text-sm text-danger">This order was cancelled{order.cancelReason ? `: ${order.cancelReason}` : ''}.</div>;
   }
-  const idx = trackingStepIndex(order.status);
+  const idx = Math.max(0, trackingStepIndex(order.status));
+  const finished = order.status === 'DELIVERED' || order.status === 'PARTIALLY_DELIVERED';
+  const head = TRACKING_HEADLINE[order.status];
   return (
-    <ol className="flex items-start justify-between">
-      {TRACKING_STEPS.map((s, i) => {
-        const done = i <= idx;
-        return (
-          <li key={s} className="relative flex flex-1 flex-col items-center text-center">
-            {i > 0 && <span className={clsx('absolute right-1/2 top-3.5 h-0.5 w-full', i <= idx ? 'bg-primary' : 'bg-line')} />}
-            <span className={clsx('relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-2', done ? 'border-primary bg-primary text-white' : 'border-line bg-white')}>
-              {done && <Check size={14} />}
-            </span>
-            <span className={clsx('mt-1.5 text-[11px] font-medium sm:text-xs', done ? 'text-primary' : 'text-muted')}>{ORDER_STATUS_LABEL[s]}</span>
-          </li>
-        );
-      })}
-    </ol>
+    <div>
+      <div className="mb-6 flex items-center gap-3 rounded-2xl bg-mint p-3.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-primary">{finished ? <CheckCircle2 size={20} /> : <Clock size={20} />}</span>
+        <div>
+          <div className="text-sm font-semibold text-ink">{head.title}</div>
+          <div className="text-xs text-muted">{head.text}</div>
+        </div>
+      </div>
+      <ol className="flex items-start justify-between">
+        {TRACKING_STEPS.map((s, i) => {
+          const done = i < idx || (finished && i === idx);
+          const current = i === idx && !finished;
+          const Icon = STEP_ICON[s as keyof typeof STEP_ICON];
+          return (
+            <li key={s} className="relative flex flex-1 flex-col items-center text-center">
+              {i > 0 && <span className={clsx('absolute right-1/2 top-4 h-[3px] w-full rounded-full transition-colors', i <= idx ? 'bg-primary' : 'bg-line')} />}
+              <span className="relative z-10 flex h-9 w-9 items-center justify-center">
+                {current && <span className="absolute inset-0 animate-ping rounded-full bg-primary/40" />}
+                <span className={clsx('relative flex h-9 w-9 items-center justify-center rounded-full border-2 transition', done || current ? 'border-primary bg-primary text-white' : 'border-line bg-white text-muted')}>
+                  {done ? <Check size={18} /> : <Icon size={16} />}
+                </span>
+              </span>
+              <span className={clsx('mt-2 text-[11px] sm:text-xs', done || current ? 'font-semibold text-primary' : 'font-medium text-muted')}>{ORDER_STATUS_LABEL[s]}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 

@@ -83,3 +83,17 @@ export function trackingStepIndex(status: OrderStatus): number {
       return TRACKING_STEPS.indexOf(status);
   }
 }
+
+/** One-line, customer-friendly description of where an order is right now. */
+export const TRACKING_HEADLINE: Record<OrderStatus, { title: string; text: string }> = {
+  PAYMENT_PENDING: { title: 'Waiting for payment', text: 'Complete the payment to confirm your order.' },
+  PLACED: { title: 'Order received', text: 'The store will confirm it in a few minutes.' },
+  CONFIRMED: { title: 'Order confirmed', text: 'We are getting your fresh items ready.' },
+  PACKING: { title: 'Packing your order', text: 'Picking the freshest produce for you.' },
+  PACKED: { title: 'Packed & ready', text: 'A delivery partner will be assigned shortly.' },
+  ASSIGNED: { title: 'Delivery partner assigned', text: 'They will leave for your address soon.' },
+  OUT_FOR_DELIVERY: { title: 'On the way to you', text: 'Please keep your phone handy.' },
+  DELIVERED: { title: 'Delivered', text: 'Enjoy your fresh produce!' },
+  PARTIALLY_DELIVERED: { title: 'Delivered', text: 'Items you returned were taken off your bill.' },
+  CANCELLED: { title: 'Order cancelled', text: 'Any payment made will be refunded.' },
+};

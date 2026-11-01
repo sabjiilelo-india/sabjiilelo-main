@@ -10,6 +10,7 @@ import { useShop } from '../lib/shop';
 import { startPayment } from '../lib/payment';
 import { Badge, Button, Card, Divider, Loader, Row, Screen, T, colors, font } from '../components/ui';
 import { toast } from '../components/toast';
+import { BusyOverlay } from '../components/BusyOverlay';
 
 export default function Checkout() {
   const { area } = useShop();
@@ -65,6 +66,7 @@ export default function Checkout() {
 
   return (
     <View style={{ flex: 1 }}>
+      <BusyOverlay visible={placing} title="Placing your order…" text="This takes a few seconds. Please don't close the app." />
       <Screen edges={[]} style={{ paddingBottom: 120 }}>
         <Card>
           <Row style={{ justifyContent: 'space-between', marginBottom: 8 }}>
