@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
 import { api } from '../lib/api';
+import { confirm } from '../components/confirm';
 import { Badge, Button, Card, Empty, Loader, Row, Screen, T, colors, font } from '../components/ui';
 
 export default function Addresses() {
@@ -27,7 +28,11 @@ export default function Addresses() {
                 <Pressable hitSlop={8} onPress={() => router.push({ pathname: '/address-form', params: { id: a.id } })}>
                   <Ionicons name="create-outline" size={20} color={colors.muted} />
                 </Pressable>
-                <Pressable hitSlop={8} onPress={() => del.mutate(a.id)} style={{ marginLeft: 12 }}>
+                <Pressable
+                  hitSlop={8}
+                  onPress={async () => (await confirm({ title: 'Delete this address?', message: `${a.label}: ${a.line1}`, tone: 'danger', icon: 'trash', confirmText: 'Delete' })) && del.mutate(a.id)}
+                  style={{ marginLeft: 12 }}
+                >
                   <Ionicons name="trash-outline" size={20} color={colors.muted} />
                 </Pressable>
               </Row>

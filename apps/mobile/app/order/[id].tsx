@@ -34,6 +34,7 @@ export default function OrderScreen() {
     refetchInterval: (query) => (query.state.data && ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'].includes(query.state.data.status) ? false : 20_000),
   });
   const [issueOpen, setIssueOpen] = useState(false);
+  const [picked, setPicked] = useState(0);
   const set = (o: OrderDetail) => qc.setQueryData(qk.myOrder(o.id), o);
 
   const rate = useMutation({ mutationFn: (s: number) => api.me.rate(id, s), onSuccess: (o) => (set(o), toast('Thanks for rating!')) });
@@ -161,8 +162,15 @@ export default function OrderScreen() {
           <T v="h3">How fresh was everything?</T>
           <Row style={{ gap: 6, marginTop: 8 }}>
             {[1, 2, 3, 4, 5].map((s) => (
-              <Pressable key={s} onPress={() => rate.mutate(s)} hitSlop={6}>
-                <Ionicons name="star" size={34} color={colors.line} />
+              <Pressable
+                key={s}
+                onPress={() => {
+                  setPicked(s);
+                  rate.mutate(s);
+                }}
+                hitSlop={6}
+              >
+                <Ionicons name="star" size={34} color={s <= picked ? colors.accent : colors.line} />
               </Pressable>
             ))}
           </Row>

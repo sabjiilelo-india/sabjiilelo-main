@@ -26,7 +26,7 @@ function MyDeliveries() {
       <PageHeader title="My deliveries" actions={<Toggle checked={!!user?.isOnline} onChange={(v) => online.mutate(v)} label={user?.isOnline ? 'Online' : 'Offline'} />} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard label="Delivered today" value={cash.data?.deliveredCount ?? 0} />
-        <StatCard label="Cash collected" value={formatINR(cash.data?.codExpectedPaise ?? 0)} tone="orange" />
+        <StatCard label="Cash in hand" value={formatINR(Math.max(0, (cash.data?.codExpectedPaise ?? 0) - (cash.data?.depositedPaise ?? 0)))} hint={`Collected ${formatINR(cash.data?.codExpectedPaise ?? 0)} today`} tone="orange" />
         <StatCard label="Cash status" value={cash.data?.status.toLowerCase() ?? '—'} />
       </div>
       <div className="mb-4">
@@ -134,6 +134,26 @@ export function DeliveryOrder() {
         <Button size="lg" block loading={start.isPending} onClick={() => start.mutate()}>
           Start delivery
         </Button>
+      )}
+
+      {o.status === 'ASSIGNED' && (
+        <Card className="p-5">
+          <h2 className="mb-2 text-base">Items to deliver</h2>
+          <div className="divide-y divide-line/70">
+            {o.items.map((i) => (
+              <div key={i.id} className="flex items-center justify-between py-2.5 text-sm">
+                <span>
+                  <span className="font-medium text-ink">{i.name}</span>
+                  <span className="block text-xs text-muted">
+                    {i.variantLabel} × {effectiveLineQty(i)}
+                  </span>
+                </span>
+                <span className="font-semibold">{formatINR(i.pricePaise * effectiveLineQty(i))}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-muted">{o.paymentMode === 'COD' ? `Collect ${formatINR(o.finalPayablePaise)} in cash.` : 'Prepaid, nothing to collect.'}</p>
+        </Card>
       )}
 
       {o.status === 'OUT_FOR_DELIVERY' && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { qk } from '@sabjiilelo/api-client';
 import { ROLE_LABEL, PRIVACY, TERMS } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
@@ -38,6 +39,7 @@ function StaffProfile() {
     },
     onError: (e) => toast.error('Could not save', (e as Error).message),
   });
+  const vendor = useQuery({ queryKey: qk.vendorProfile, queryFn: api.vendor.profile, enabled: user?.role === 'VENDOR' });
   if (!user) return null;
   const dirty = name !== (user.name ?? '') || email !== (user.email ?? '');
 
@@ -67,7 +69,25 @@ function StaffProfile() {
             </div>
           </Card>
         </div>
-        <SettingsBlock customer={false} />
+        <div className="space-y-4">
+          {vendor.data && (
+            <Card className="p-5 text-sm">
+              <h2 className="mb-3 text-base">Business details</h2>
+              <dl className="grid grid-cols-[110px_1fr] gap-y-2">
+                <dt className="text-muted">Business</dt>
+                <dd className="font-medium text-ink">{vendor.data.businessName}</dd>
+                <dt className="text-muted">GSTIN</dt>
+                <dd className="text-ink">{vendor.data.gstin || '—'}</dd>
+                <dt className="text-muted">UPI</dt>
+                <dd className="text-ink">{vendor.data.upiId || '—'}</dd>
+                <dt className="text-muted">Bank</dt>
+                <dd className="text-ink">{vendor.data.bankAccount ? `${vendor.data.bankAccount}${vendor.data.ifsc ? ` · ${vendor.data.ifsc}` : ''}` : '—'}</dd>
+              </dl>
+              <p className="mt-3 text-xs text-muted">To change payout details, contact your area admin.</p>
+            </Card>
+          )}
+          <SettingsBlock customer={false} />
+        </div>
       </div>
     </>
   );

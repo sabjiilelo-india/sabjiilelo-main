@@ -2,19 +2,21 @@ import { useEffect, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
-import { rateUnitLabel, todayIST } from '@sabjiilelo/shared';
+import { addDays, formatDateLabel, rateUnitLabel, todayIST } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
-import { Button, Card, Loader, Row, Screen, T, colors, font } from '../../components/ui';
+import { Button, Card, Chip, Loader, Row, Screen, T, colors, font } from '../../components/ui';
 import { toast } from '../../components/toast';
 
 export default function Rates() {
-  const date = todayIST();
+  const today = todayIST();
+  const [day, setDay] = useState<0 | 1>(0);
+  const date = addDays(today, day);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: qk.vendorRates(date), queryFn: () => api.vendor.rates(date) });
   const [edits, setEdits] = useState<Record<string, string>>({});
   useEffect(() => {
     setEdits({});
-  }, [q.dataUpdatedAt]);
+  }, [q.dataUpdatedAt, date]);
   const save = useMutation({
     mutationFn: () =>
       api.vendor.saveRates({
@@ -33,6 +35,13 @@ export default function Rates() {
   return (
     <View style={{ flex: 1 }}>
       <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()} style={{ paddingBottom: 100 }}>
+        <Row style={{ gap: 8, marginBottom: 10 }}>
+          <Chip label="Today" active={day === 0} onPress={() => setDay(0)} />
+          <Chip label="Tomorrow" active={day === 1} onPress={() => setDay(1)} />
+          <T v="small" style={{ marginLeft: 4 }}>
+            {formatDateLabel(date)}
+          </T>
+        </Row>
         <T v="small" style={{ marginBottom: 12 }}>
           Quote your mandi price. The store picks the best rates when ordering.
         </T>
