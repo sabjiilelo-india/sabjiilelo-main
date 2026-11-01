@@ -165,6 +165,13 @@ opsRouter.post('/pos/orders', requirePermission('pos'), async (req, res) => {
 
 /** Bill of Supply or packing slip PDF. Customers may download their own bills. */
 export const invoiceRouter = Router();
+// The mobile app opens bills in the system browser, which cannot send headers, so a
+// (15-minute) access token may also arrive as ?token=.
+invoiceRouter.use((req, _res, next) => {
+  const token = q(req, 'token');
+  if (token && !req.headers.authorization) req.headers.authorization = `Bearer ${token}`;
+  next();
+});
 invoiceRouter.get('/:id/:kind.pdf', authenticate, async (req, res) => {
   const u = me(req);
   const o = await loadOrder(param(req, 'id'));

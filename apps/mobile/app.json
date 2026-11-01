@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Sabjii Le Lo",
+    "slug": "sabjiilelo",
+    "scheme": "sabjiilelo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#064420"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sabjiilelo.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Take a photo of items returned at the door or reported damaged.",
+        "NSPhotoLibraryUsageDescription": "Attach a photo to an issue report."
+      }
+    },
+    "android": {
+      "package": "com.sabjiilelo.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#fbf6ea"
+      },
+      "permissions": ["CAMERA", "POST_NOTIFICATIONS"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#0e5a32"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Take a photo of items returned at the door or reported damaged."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "eas": {}
+    }
+  }
+}

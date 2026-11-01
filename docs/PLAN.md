@@ -211,3 +211,29 @@ HR (KYC, attendance, salary), substitution flow, wallet, subscriptions/daily bas
   6. Vendor PO goes through to accept, GRN and payable, then gets paid.
   7. Satna admin sees no Jabalpur data.
 - **Local run**: `pnpm dev` (API + web) plus Expo dev client against the local API. Check the web shop and app look identical using theme tokens.
+
+## Implementation status (2026-11-01)
+
+Built:
+- API covering every flow above.
+- Web app with all portals.
+- Expo app for customer, delivery partner and vendor.
+- Seed data for Jabalpur and Satna.
+- End-to-end API test and shared unit tests.
+- Render blueprint and EAS profiles.
+
+Choices made during the build:
+- **Mobile styling**: plain React Native styles fed by the shared `@sabjiilelo/theme` tokens instead of NativeWind. Same colours and fonts as the web, fewer native build risks on Expo SDK 54.
+- **Brand assets**: stay in the repo-level `public/` folder (web `publicDir`, API `/static`). The mobile app keeps copies in `apps/mobile/assets`.
+- **Mobile Razorpay**: checkout runs in a WebView, so it works in Expo Go without the native SDK.
+- **Mock mode**: Razorpay runs a mock gateway until keys are set, and OTP is fixed at 9999 until MSG91 is configured. Uploads go to local disk until Cloudinary is configured.
+- **Quantities**: stock is stored as integer base units (grams, millilitres or count) instead of decimals.
+- **Mobile bills**: the invoice PDF accepts the 15-minute access token as `?token=` so the phone can open bills in the browser.
+- **Stock rollover**: a job carries the latest stock board forward to the next two days if the manager hasn't set them.
+
+Still needed before launch:
+- Razorpay keys and webhook.
+- Cloudinary account.
+- EAS project id, for push notifications.
+- MSG91 DLT template, for real OTPs.
+- Real product photos.
