@@ -1,0 +1,23 @@
+export declare const colors: {
+  primary: string;
+  'dark-green': string;
+  'light-green': string;
+  beige: string;
+  cream: string;
+  accent: string;
+  leaf: string;
+  ink: string;
+  body: string;
+  mint: string;
+  deep: string;
+  muted: string;
+  line: string;
+  danger: string;
+  warning: string;
+  whatsapp: string;
+  white: string;
+};
+export declare const fonts: { sans: string; script: string };
+export declare const radius: { sm: number; md: number; lg: number; xl: number; pill: number };
+export declare const spacing: { xs: number; sm: number; md: number; lg: number; xl: number; xxl: number };
+export declare const tailwindPreset: Record<string, unknown>;
