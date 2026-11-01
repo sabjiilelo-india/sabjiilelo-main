@@ -49,7 +49,9 @@ export default function Checkout() {
       const { order, razorpay } = await api.me.placeOrder({ addressId, slotId: slot.slotId, slotDate: slot.date, couponCode: coupon, paymentMode: mode, channel: 'APP' });
       qc.invalidateQueries({ queryKey: ['me'] });
       qc.invalidateQueries({ queryKey: ['catalog'] });
-      router.replace(`/order/${order.id}?placed=1`);
+      router.dismissAll();
+      router.navigate('/(customer)/orders');
+      router.push(`/order/${order.id}?placed=1`);
       if (razorpay) await startPayment(order.id, razorpay).then(() => qc.invalidateQueries({ queryKey: qk.myOrder(order.id) }));
     } catch (e) {
       toast((e as Error).message);

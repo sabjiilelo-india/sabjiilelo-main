@@ -42,7 +42,7 @@ export default function OrderScreen() {
     mutationFn: () => api.me.reorder(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['me', 'cart'] });
-      router.push('/(customer)/cart');
+      router.navigate('/(customer)/cart');
     },
   });
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -35,6 +35,7 @@ export default function Location() {
 
   return (
     <Screen edges={first ? ['top'] : []}>
+      <Stack.Screen options={{ headerShown: !first }} />
       <View style={{ alignItems: 'center', marginTop: 24 }}>
         <Image source={require('../assets/house.webp')} style={{ width: 110, height: 110 }} contentFit="contain" />
         <T v="h2" style={{ marginTop: 12 }}>Where should we deliver?</T>

@@ -12,7 +12,7 @@ export function StaffProfile({ children }: { children?: ReactNode }) {
   const { user } = useAuth();
   const logout = useConfirmLogout();
   return (
-    <Screen>
+    <Screen edges={[]}>
       <LinearGradientFallback style={{ borderRadius: 26, padding: 18 }}>
         <Row style={{ gap: 14 }}>
           <View style={{ width: 58, height: 58, borderRadius: 18, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>

@@ -10,10 +10,7 @@ export default function Ledger() {
   if (q.isLoading || !q.data) return <Loader />;
   const d = q.data;
   return (
-    <Screen refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
-      <T v="h1" style={{ marginBottom: 12 }}>
-        Payments
-      </T>
+    <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
       <Card style={{ backgroundColor: colors.primary }}>
         <T style={{ color: 'rgba(255,255,255,0.8)' }}>Amount due to you</T>
         <T style={{ color: '#fff', fontFamily: font.bold, fontSize: 28 }}>{formatINR(d.balancePaise)}</T>

@@ -21,7 +21,7 @@ export default function Account() {
   const since = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '–';
 
   return (
-    <Screen refreshing={orders.isRefetching} onRefresh={() => orders.refetch()}>
+    <Screen edges={[]} refreshing={orders.isRefetching} onRefresh={() => orders.refetch()}>
       <LinearGradientFallback style={{ borderRadius: 26, padding: 18 }}>
         <Row style={{ gap: 14 }}>
           <View style={{ width: 58, height: 58, borderRadius: 18, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>

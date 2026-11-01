@@ -20,10 +20,7 @@ export default function Browse() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen refreshing={items.isRefetching} onRefresh={() => items.refetch()} style={{ paddingBottom: 100 }}>
-        <T v="h1" style={{ marginBottom: 12 }}>
-          Browse
-        </T>
+      <Screen edges={[]} refreshing={items.isRefetching} onRefresh={() => items.refetch()} style={{ paddingBottom: 100 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 16, height: 46, borderWidth: 1, borderColor: colors.line }}>
           <Ionicons name="search" size={18} color={colors.muted} />
           <TextInput

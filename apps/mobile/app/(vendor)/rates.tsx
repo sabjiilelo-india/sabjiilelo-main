@@ -32,8 +32,7 @@ export default function Rates() {
   if (q.isLoading) return <Loader />;
   return (
     <View style={{ flex: 1 }}>
-      <Screen refreshing={q.isRefetching} onRefresh={() => q.refetch()} style={{ paddingBottom: 100 }}>
-        <T v="h1">Today's rates</T>
+      <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()} style={{ paddingBottom: 100 }}>
         <T v="small" style={{ marginBottom: 12 }}>
           Quote your mandi price. The store picks the best rates when ordering.
         </T>

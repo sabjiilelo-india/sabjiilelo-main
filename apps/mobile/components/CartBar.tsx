@@ -12,7 +12,7 @@ export function CartBar() {
   return (
     <View style={{ position: 'absolute', left: 12, right: 12, bottom: 12 }}>
       <Pressable
-        onPress={() => router.push('/(customer)/cart')}
+        onPress={() => router.navigate('/(customer)/cart')}
         style={{
           backgroundColor: colors.primary,
           borderRadius: 16,

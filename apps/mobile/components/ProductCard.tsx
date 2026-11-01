@@ -64,9 +64,11 @@ export function ProductCard({ item, width }: { item: CatalogItem; width: number 
             {item.sourceNote ? `🌱 ${item.sourceNote}` : 'Fresh today'}
           </T>
         </View>
-        <T style={{ fontFamily: font.semibold, color: colors.ink, minHeight: 38, fontSize: 13.5, lineHeight: 19 }} numberOfLines={2}>
-          {item.name}
-        </T>
+        <Pressable onPress={() => router.push(`/item/${item.id}`)}>
+          <T style={{ fontFamily: font.semibold, color: colors.ink, minHeight: 38, fontSize: 13.5, lineHeight: 19 }} numberOfLines={2}>
+            {item.name}
+          </T>
+        </Pressable>
         {item.variants.length > 1 ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
             {item.variants.map((x, i) => (

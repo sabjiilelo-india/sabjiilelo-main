@@ -60,7 +60,7 @@ export default function Home() {
           </Pressable>
         </Row>
 
-        <Pressable onPress={() => router.push('/(customer)/browse')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 16, height: 46, borderWidth: 1, borderColor: colors.line, marginBottom: 16 }}>
+        <Pressable onPress={() => router.navigate('/(customer)/browse')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 16, height: 46, borderWidth: 1, borderColor: colors.line, marginBottom: 16 }}>
           <Ionicons name="search" size={18} color={colors.muted} />
           <T v="small">Search tomato, apple, palak…</T>
         </Pressable>

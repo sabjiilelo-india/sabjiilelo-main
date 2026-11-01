@@ -10,8 +10,8 @@ export default function CartTab() {
   if (isLoading) return <Loader />;
   if (!cart.lines.length) {
     return (
-      <Screen>
-        <Empty image={require('../../assets/basket.webp')} title="Your cart is empty" text="Fill it with farm-fresh vegetables and fruits." action={<Button title="Start shopping" onPress={() => router.push('/(customer)')} />} />
+      <Screen edges={[]}>
+        <Empty image={require('../../assets/basket.webp')} title="Your cart is empty" text="Fill it with farm-fresh vegetables and fruits." action={<Button title="Start shopping" onPress={() => router.navigate('/(customer)')} />} />
       </Screen>
     );
   }
@@ -19,10 +19,7 @@ export default function CartTab() {
   const blocked = cart.lines.some((l) => !l.available);
   return (
     <View style={{ flex: 1 }}>
-      <Screen onRefresh={refetch} style={{ paddingBottom: 120 }}>
-        <T v="h1" style={{ marginBottom: 12 }}>
-          Your cart
-        </T>
+      <Screen edges={[]} onRefresh={refetch} style={{ paddingBottom: 120 }}>
         {blocked && (
           <View style={{ backgroundColor: '#ffe9d9', padding: 10, borderRadius: 12, marginBottom: 10 }}>
             <T style={{ color: '#c25a14' }}>Some items are sold out for the next slot. Reduce or remove them to continue.</T>

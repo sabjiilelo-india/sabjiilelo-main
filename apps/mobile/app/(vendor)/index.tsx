@@ -14,9 +14,8 @@ export default function VendorOrders() {
   const [status, setStatus] = useState('SENT');
   const q = useQuery({ queryKey: qk.vendorPos(status), queryFn: () => api.vendor.pos(status || undefined), refetchInterval: 60_000 });
   return (
-    <Screen refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
+    <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
       <T v="tiny">{user?.area?.name}</T>
-      <T v="h1">Purchase orders</T>
       <Row style={{ gap: 6, marginVertical: 12 }}>
         <Chip label="New" active={status === 'SENT'} onPress={() => setStatus('SENT')} />
         <Chip label="Accepted" active={status === 'ACCEPTED,ADJUSTED'} onPress={() => setStatus('ACCEPTED,ADJUSTED')} />

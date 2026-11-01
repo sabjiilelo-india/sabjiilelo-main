@@ -12,6 +12,7 @@ import { colors } from '@sabjiilelo/theme';
 import { AuthProvider } from '../lib/auth';
 import { ShopProvider } from '../lib/shop';
 import { ToastHost } from '../components/toast';
+import { CartButton, StackBar } from '../components/AppBar';
 import { ConfirmHost } from '../components/confirm';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -41,12 +42,10 @@ export default function RootLayout() {
               <StatusBar style="dark" />
               <Stack
                 screenOptions={{
-                  headerShadowVisible: false,
-                  headerStyle: { backgroundColor: colors.cream },
-                  headerTitleStyle: { fontFamily: 'Poppins_600SemiBold', color: colors.ink },
-                  headerTintColor: colors.primary,
+                  // One app bar for every pushed screen: back arrow (close icon on modals) + title + actions.
+                  header: (p) => <StackBar options={p.options} back={p.back} navigation={p.navigation} />,
                   contentStyle: { backgroundColor: colors.cream },
-                  headerBackButtonDisplayMode: 'minimal',
+                  animation: 'slide_from_right',
                 }}
               >
                 <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -55,11 +54,11 @@ export default function RootLayout() {
                 <Stack.Screen name="(delivery)" options={{ headerShown: false }} />
                 <Stack.Screen name="(vendor)" options={{ headerShown: false }} />
                 <Stack.Screen name="location" options={{ presentation: 'modal', title: 'Delivery location' }} />
-                <Stack.Screen name="item/[id]" options={{ title: '' }} />
-                <Stack.Screen name="category/[id]" options={{ title: 'Category' }} />
+                <Stack.Screen name="item/[id]" options={{ title: 'Item', headerRight: () => <CartButton /> }} />
+                <Stack.Screen name="category/[id]" options={{ title: 'Category', headerRight: () => <CartButton /> }} />
                 <Stack.Screen name="checkout" options={{ title: 'Checkout' }} />
                 <Stack.Screen name="pay" options={{ title: 'Payment', presentation: 'modal' }} />
-                <Stack.Screen name="order/[id]" options={{ title: 'Order' }} />
+                <Stack.Screen name="order/[id]" options={{ title: 'Order details' }} />
                 <Stack.Screen name="addresses" options={{ title: 'Addresses' }} />
                 <Stack.Screen name="address-form" options={{ title: 'Address', presentation: 'modal' }} />
                 <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
@@ -68,7 +67,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile" options={{ title: 'Edit profile' }} />
                 <Stack.Screen name="settings" options={{ title: 'Settings' }} />
                 <Stack.Screen name="help" options={{ title: 'Help & support' }} />
-                <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
+                <Stack.Screen name="legal/[doc]" options={{ title: 'Terms & conditions' }} />
                 <Stack.Screen name="about" options={{ title: 'About' }} />
               </Stack>
               <ToastHost />

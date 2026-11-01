@@ -11,12 +11,9 @@ export default function OrdersTab() {
   const q = useQuery({ queryKey: qk.myOrders, queryFn: () => api.me.orders(1) });
   if (q.isLoading) return <Loader />;
   return (
-    <Screen refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
-      <T v="h1" style={{ marginBottom: 12 }}>
-        My orders
-      </T>
+    <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
       {!q.data?.data.length ? (
-        <Empty image={require('../../assets/truck.webp')} title="No orders yet" text="Your fresh orders will show up here." action={<Button title="Start shopping" onPress={() => router.push('/(customer)')} />} />
+        <Empty image={require('../../assets/truck.webp')} title="No orders yet" text="Your fresh orders will show up here." action={<Button title="Start shopping" onPress={() => router.navigate('/(customer)')} />} />
       ) : (
         <View style={{ gap: 10 }}>
           {q.data.data.map((o) => (
