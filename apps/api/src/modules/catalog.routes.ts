@@ -11,6 +11,13 @@ import { remainingByItem } from '../services/stock';
 /** Public catalog. Customers browse without logging in; the area comes from their pincode. */
 export const catalogRouter = Router();
 
+// The public catalog is the same for every shopper in an area; a short browser cache makes
+// back/forward navigation instant without serving stale stock for long.
+catalogRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'public, max-age=20, stale-while-revalidate=60');
+  next();
+});
+
 async function activeArea(areaId: string | undefined) {
   if (!areaId) throw badRequest('areaId is required');
   const area = await prisma.area.findFirst({ where: { id: areaId, isActive: true } });

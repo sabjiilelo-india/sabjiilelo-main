@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
+import { confirm } from '../components/confirm';
 import type { OrderDetail, RazorpayCheckout } from '@sabjiilelo/shared';
 import { api } from './api';
 
@@ -12,12 +12,12 @@ export async function startPayment(orderId: string, rp: RazorpayCheckout): Promi
     router.push({ pathname: '/pay', params: { orderId, checkout: JSON.stringify(rp) } });
     return null;
   }
-  const ok = await new Promise<boolean>((resolve) =>
-    Alert.alert('Test payment', 'Razorpay keys are not configured yet. Simulate a successful UPI payment?', [
-      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Pay', onPress: () => resolve(true) },
-    ]),
-  );
+  const ok = await confirm({
+    title: `Pay ₹${(rp.amountPaise / 100).toFixed(2)}`,
+    message: 'Test mode: Razorpay keys are not configured yet, so this simulates a successful UPI payment.',
+    confirmText: 'Pay now',
+    icon: 'card',
+  });
   if (!ok) return null;
   const signed = await api.payments.mockCheckout(rp.razorpayOrderId);
   return api.payments.verify({ orderId, ...signed });

@@ -15,8 +15,8 @@ export function AddButton({ item, variant, small = true }: { item: CatalogItem; 
   const { qtyOf, setQty } = useCart();
   const qty = qtyOf(variant.id);
   const max = Math.floor(item.remainingQty / variant.baseQty);
-  const w = small ? 92 : 112;
-  const h = small ? 32 : 40;
+  const w = small ? 76 : 112;
+  const h = small ? 34 : 40;
   if (max <= 0 && qty === 0) {
     return (
       <View style={{ width: w, height: h, borderRadius: 12, backgroundColor: colors.beige, alignItems: 'center', justifyContent: 'center' }}>
@@ -49,17 +49,22 @@ export function ProductCard({ item, width }: { item: CatalogItem; width: number 
   const v = item.variants[vi] ?? item.variants[0]!;
   const off = discountPct(v);
   return (
-    <View style={[s.card, { width, padding: 0, overflow: 'hidden' }]}>
-      <Pressable onPress={() => router.push(`/item/${item.id}`)}>
-        <ProduceImage uri={item.images[0]} name={item.name} size={width} style={{ borderRadius: 0, height: width * 0.85 }} />
+    <View style={[s.card, { width, padding: 8, overflow: 'hidden', opacity: item.remainingQty <= 0 ? 0.6 : 1 }]}>
+      <Pressable onPress={() => router.push(`/item/${item.id}`)} style={{ borderRadius: 14, overflow: 'hidden' }}>
+        <ProduceImage uri={item.images[0]} name={item.name} size={width - 16} style={{ borderRadius: 14, height: (width - 16) * 0.78 }} />
         {off > 0 && (
-          <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-            <Text style={{ color: '#fff', fontFamily: font.semibold, fontSize: 10 }}>{off}% OFF</Text>
+          <View style={{ position: 'absolute', top: 0, left: 0, backgroundColor: colors.accent, borderBottomRightRadius: 12, paddingHorizontal: 7, paddingVertical: 4 }}>
+            <Text style={{ color: '#fff', fontFamily: font.bold, fontSize: 10, lineHeight: 12 }}>{off}%{'\n'}OFF</Text>
           </View>
         )}
       </Pressable>
-      <View style={{ padding: 10 }}>
-        <T style={{ fontFamily: font.semibold, color: colors.ink, minHeight: 38 }} numberOfLines={2}>
+      <View style={{ paddingTop: 8, paddingHorizontal: 2 }}>
+        <View style={{ alignSelf: 'flex-start', backgroundColor: item.sourceNote ? colors.mint : colors.beige, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4, maxWidth: '100%' }}>
+          <T v="tiny" style={{ color: item.sourceNote ? colors.primary : colors.muted }} numberOfLines={1}>
+            {item.sourceNote ? `🌱 ${item.sourceNote}` : 'Fresh today'}
+          </T>
+        </View>
+        <T style={{ fontFamily: font.semibold, color: colors.ink, minHeight: 38, fontSize: 13.5, lineHeight: 19 }} numberOfLines={2}>
           {item.name}
         </T>
         {item.variants.length > 1 ? (
@@ -73,13 +78,11 @@ export function ProductCard({ item, width }: { item: CatalogItem; width: number 
             {v.label}
           </T>
         )}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10, gap: 4 }}>
           <View>
-            <T style={{ fontFamily: font.semibold, color: colors.ink }}>{formatINR(v.pricePaise)}</T>
+            <T style={{ fontFamily: font.bold, color: colors.ink, fontSize: 15 }}>{formatINR(v.pricePaise)}</T>
             {off > 0 && <T v="tiny" style={{ textDecorationLine: 'line-through' }}>{formatINR(v.mrpPaise)}</T>}
           </View>
-        </View>
-        <View style={{ marginTop: 8 }}>
           <AddButton item={item} variant={v} />
         </View>
       </View>

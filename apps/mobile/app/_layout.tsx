@@ -11,6 +11,8 @@ import { ApiError } from '@sabjiilelo/api-client';
 import { colors } from '@sabjiilelo/theme';
 import { AuthProvider } from '../lib/auth';
 import { ShopProvider } from '../lib/shop';
+import { ToastHost } from '../components/toast';
+import { ConfirmHost } from '../components/confirm';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -63,7 +65,14 @@ export default function RootLayout() {
                 <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
                 <Stack.Screen name="delivery/[id]" options={{ title: 'Delivery' }} />
                 <Stack.Screen name="vendor-po/[id]" options={{ title: 'Purchase order' }} />
+                <Stack.Screen name="profile" options={{ title: 'Edit profile' }} />
+                <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+                <Stack.Screen name="help" options={{ title: 'Help & support' }} />
+                <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
+                <Stack.Screen name="about" options={{ title: 'About' }} />
               </Stack>
+              <ToastHost />
+              <ConfirmHost />
             </ShopProvider>
           </AuthProvider>
         </QueryClientProvider>

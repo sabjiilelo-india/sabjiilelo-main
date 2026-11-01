@@ -2,6 +2,7 @@ import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttribu
 import { Loader2, X } from 'lucide-react';
 import clsx from 'clsx';
 import { ORDER_STATUS_LABEL, type OrderStatus } from '@sabjiilelo/shared';
+import { confirm } from './confirm';
 
 // ---------------------------------------------------------------- button
 
@@ -283,7 +284,7 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
 }
 
 export function ConfirmButton({ onConfirm, confirmText = 'Are you sure?', ...props }: ButtonProps & { onConfirm: () => void; confirmText?: string }) {
-  return <Button {...props} onClick={() => window.confirm(confirmText) && onConfirm()} />;
+  return <Button {...props} onClick={async () => (await confirm({ title: confirmText })) && onConfirm()} />;
 }
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {

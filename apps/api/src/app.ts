@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import { env } from './config/env';
@@ -39,6 +40,7 @@ export function createApp() {
   // Must see the raw body to verify Razorpay's signature.
   app.post('/api/payments/webhook', ...razorpayWebhook);
 
+  app.use(compression());
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));

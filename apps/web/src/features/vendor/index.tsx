@@ -7,6 +7,7 @@ import { costPaise, formatDateLabel, formatINR, formatQty, fromBaseQty, rateUnit
 import { api } from '../../lib/api';
 import { Button, Card, EmptyState, Field, Input, PageHeader, PageLoader, StatCard, Table, Tabs } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 import { PoBadge } from '../supply';
 
 export default function VendorPortal({ page }: { page: 'orders' | 'order' | 'rates' | 'ledger' }) {
@@ -123,7 +124,7 @@ function VendorOrder() {
           <Field label="Note (optional)" className="min-w-[240px] flex-1">
             <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
-          <Button variant="ghost" className="text-danger" loading={respond.isPending} onClick={() => respond.mutate('REJECT')}>
+          <Button variant="ghost" className="text-danger" loading={respond.isPending} onClick={async () => (await confirm({ title: 'Decline this order?', message: 'The store will look for another supplier.', tone: 'danger', confirmText: 'Decline' })) && respond.mutate('REJECT')}>
             Decline
           </Button>
           <Button loading={respond.isPending} onClick={() => respond.mutate(changed ? 'ADJUST' : 'ACCEPT')}>

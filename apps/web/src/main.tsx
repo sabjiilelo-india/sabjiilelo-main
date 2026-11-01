@@ -12,6 +12,7 @@ import { ApiError } from '@sabjiilelo/api-client';
 import { AuthProvider } from './lib/auth';
 import { ShopProvider } from './lib/shop';
 import { Toaster } from './components/toast';
+import { ConfirmHost } from './components/confirm';
 import { App } from './App';
 
 const queryClient = new QueryClient({
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
           <ShopProvider>
             <App />
             <Toaster />
+            <ConfirmHost />
           </ShopProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -193,6 +193,10 @@ model User {
   areaId        String?
   isOnline      Boolean    @default(false)
   expoPushToken String?
+  email         String?
+  notifyOrders  Boolean    @default(true)
+  notifyOffers  Boolean    @default(true)
+  deletedAt     DateTime?
   createdById   String?
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())

@@ -9,6 +9,7 @@ import { api } from '../../lib/api';
 import { Button, Card, Chip, Empty, Loader, ProduceImage, Row, Screen, StatusBadge, T, colors, font } from '../../components/ui';
 import { PhotoPicker } from '../../components/PhotoPicker';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 
 type Rejection = { qty: number; reason: string; photo: string | null };
 
@@ -138,7 +139,7 @@ export default function DeliveryOrder() {
             )}
             {o.paymentMode !== 'COD' && payable < o.finalPayablePaise && <T v="small" style={{ marginTop: 6 }}>{formatINR(o.finalPayablePaise - payable)} will be refunded to the customer.</T>}
           </Card>
-          <Button title="Mark delivered" size="lg" icon="checkmark-circle" style={{ marginTop: 16 }} loading={deliver.isPending} onPress={() => deliver.mutate(payable)} />
+          <Button title="Mark delivered" size="lg" icon="checkmark-circle" style={{ marginTop: 16 }} loading={deliver.isPending} onPress={async () => (await confirm({ title: 'Mark as delivered?', message: o.paymentMode === 'COD' ? `Confirm you collected ${formatINR(cash != null ? Math.round(Number(cash) * 100) : payable)} in cash.` : 'The customer will be notified right away.', confirmText: 'Delivered', icon: 'checkmark-done' })) && deliver.mutate(payable)} />
         </>
       )}
     </Screen>

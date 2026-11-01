@@ -29,8 +29,15 @@ import {
   ShieldCheck,
   Wallet,
   X,
+  ChevronDown,
+  FileText,
+  HelpCircle,
+  UserRound,
   type LucideProps,
 } from 'lucide-react';
+import { Brand } from '../components/Brand';
+import { confirm } from '../components/confirm';
+import { toast } from '../components/toast';
 import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { qk } from '@sabjiilelo/api-client';
@@ -118,10 +125,12 @@ const STAFF_NAV: Group[] = [
 export function DashboardLayout() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [menu, setMenu] = useState(false);
   const loc = useLocation();
   useEffect(() => {
     setOpen(false);
   }, [loc.pathname]);
+  const base = user?.role === 'SUPERADMIN' ? '/admin' : '/dashboard';
   const notes = useQuery({ queryKey: qk.notifications, queryFn: () => api.notifications.list(), enabled: user?.role !== 'SUPERADMIN', refetchInterval: 60_000 });
 
   if (!user) return null;
@@ -132,16 +141,17 @@ export function DashboardLayout() {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between px-5 py-5">
-        <Link to="/">
-          <img src="/images/logo-full.webp" alt="Sabjii Le Lo" className="h-10" />
-        </Link>
+        <Brand to={user.role === 'SUPERADMIN' ? '/admin/overview' : '/dashboard'} />
         <button className="rounded-lg p-1 text-muted lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu">
           <X size={20} />
         </button>
       </div>
-      <div className="mx-4 mb-4 rounded-xl bg-light-green/70 px-3 py-2.5">
-        <div className="text-xs text-muted">{ROLE_LABEL[user.role]}</div>
-        <div className="truncate text-sm font-semibold text-primary">{user.area ? `${user.area.name} · ${user.area.code}` : 'All areas'}</div>
+      <div className="mx-4 mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-light-green to-mint px-3 py-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">{(user.area?.code ?? 'SA').slice(0, 3)}</span>
+        <span className="min-w-0">
+          <span className="block text-[11px] font-medium uppercase tracking-wide text-muted">{ROLE_LABEL[user.role]}</span>
+          <span className="block truncate text-sm font-semibold text-primary">{user.area ? user.area.name : 'All areas'}</span>
+        </span>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6">
         {groups.map((g) => (
@@ -190,9 +200,49 @@ export function DashboardLayout() {
               )}
             </Link>
           )}
-          <button onClick={logout} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-muted hover:bg-beige/70 hover:text-danger">
-            <LogOut size={18} /> <span className="hidden sm:inline">Logout</span>
-          </button>
+          <div className="relative">
+            <button onClick={() => setMenu((m) => !m)} className="flex items-center gap-2 rounded-xl py-1.5 pl-1.5 pr-2.5 transition hover:bg-white/80" aria-haspopup="menu" aria-expanded={menu}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white">{(user.name ?? 'U')[0]!.toUpperCase()}</span>
+              <span className="hidden text-left leading-tight sm:block">
+                <span className="block text-sm font-semibold text-ink">{user.name ?? ROLE_LABEL[user.role]}</span>
+                <span className="block text-[11px] text-muted">{ROLE_LABEL[user.role]}</span>
+              </span>
+              <ChevronDown size={16} className={clsx('text-muted transition', menu && 'rotate-180')} />
+            </button>
+            {menu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenu(false)} />
+                <div role="menu" className="dialog-in absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-line bg-white shadow-lift">
+                  <div className="border-b border-line px-4 py-3">
+                    <div className="truncate text-sm font-semibold text-ink">{user.name}</div>
+                    <div className="truncate text-xs text-muted">{user.role === 'SUPERADMIN' ? 'Super admin' : `+91 ${user.phone}`}</div>
+                  </div>
+                  {[
+                    { to: `${base}/profile`, label: 'Profile & settings', icon: UserRound },
+                    { to: `${base}/help`, label: 'Help & support', icon: HelpCircle },
+                    { to: `${base}/terms`, label: 'Terms & conditions', icon: FileText },
+                    { to: `${base}/privacy`, label: 'Privacy policy', icon: ShieldCheck },
+                  ].map(({ to, label, icon: Icon }) => (
+                    <Link key={to} to={to} onClick={() => setMenu(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-body hover:bg-cream">
+                      <Icon size={16} className="text-muted" /> {label}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={async () => {
+                      setMenu(false);
+                      if (await confirm({ title: 'Log out?', message: 'You will need your OTP to sign back in.', confirmText: 'Log out', tone: 'danger', icon: 'logout' })) {
+                        await logout();
+                        toast.success('Logged out');
+                      }
+                    }}
+                    className="flex w-full items-center gap-3 border-t border-line px-4 py-3 text-sm font-semibold text-danger hover:bg-danger/5"
+                  >
+                    <LogOut size={16} /> Log out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8">

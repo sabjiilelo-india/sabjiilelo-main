@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Modal, Pressable, TextInput, View } from 'react-native';
+import { Modal, Pressable, TextInput, View } from 'react-native';
+import { choose } from '../../components/confirm';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
@@ -217,12 +218,17 @@ export default function OrderScreen() {
           <Button
             title="Cancel order"
             variant="ghost"
-            onPress={() =>
-              Alert.alert('Cancel this order?', o.paymentStatus === 'PAID' ? 'The full amount will be refunded.' : undefined, [
-                { text: 'Keep', style: 'cancel' },
-                ...CANCEL_REASONS.map((r) => ({ text: r, onPress: () => cancel.mutate(r) })),
-              ])
-            }
+            onPress={async () => {
+              const reason = await choose({
+                title: 'Cancel this order?',
+                message: o.paymentStatus === 'PAID' ? 'The full amount goes back to your payment method.' : 'Tell us why — it helps us improve.',
+                tone: 'danger',
+                icon: 'close-circle',
+                cancelText: 'Keep my order',
+                options: CANCEL_REASONS,
+              });
+              if (reason) cancel.mutate(reason);
+            }}
           />
         )}
       </View>

@@ -7,6 +7,7 @@ import { costPaise, formatDateLabel, formatINR, formatQty, fromBaseQty, rateUnit
 import { api } from '../../lib/api';
 import { Button, Card, Empty, Loader, Row, Screen, T, colors, font } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 import { PoBadge } from '../../components/PoBadge';
 
 export default function VendorPo() {
@@ -88,7 +89,7 @@ export default function VendorPo() {
             style={{ marginTop: 12, height: 46, borderWidth: 1, borderColor: colors.line, borderRadius: 12, paddingHorizontal: 12, fontFamily: font.regular, color: colors.ink, backgroundColor: '#fff' }}
           />
           <Button title={changed ? 'Send adjusted quantities' : 'Accept order'} size="lg" style={{ marginTop: 14 }} loading={respond.isPending} onPress={() => respond.mutate(changed ? 'ADJUST' : 'ACCEPT')} />
-          <Button title="Decline" variant="ghost" style={{ marginTop: 6 }} loading={respond.isPending} onPress={() => respond.mutate('REJECT')} />
+          <Button title="Decline" variant="ghost" style={{ marginTop: 6 }} loading={respond.isPending} onPress={async () => (await confirm({ title: 'Decline this order?', message: 'The store will look for another supplier.', tone: 'danger', confirmText: 'Decline' })) && respond.mutate('REJECT')} />
         </>
       )}
     </Screen>

@@ -16,6 +16,7 @@ import {
 import { api, openBlob } from '../../lib/api';
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, MoneyInput, PageHeader, PageLoader, StatCard, Table, Tabs } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { askText, confirm } from '../../components/confirm';
 
 export default function Accounts({ page }: { page: 'cod' | 'vendors' | 'refunds' | 'issues' | 'reports' }) {
   switch (page) {
@@ -264,10 +265,18 @@ function Refunds() {
   const [status, setStatus] = useState<'REQUESTED' | 'ALL'>('REQUESTED');
   const q = useQuery({ queryKey: qk.refunds(status), queryFn: () => api.accounts.refunds(status) });
   const decide = useMutation({
-    mutationFn: ({ id, ok }: { id: string; ok: boolean }) => (ok ? api.accounts.approveRefund(id) : api.accounts.rejectRefund(id, window.prompt('Reason for rejecting?') ?? undefined)),
-    onSuccess: () => {
+    mutationFn: async ({ id, ok }: { id: string; ok: boolean }) => {
+      if (ok) {
+        if (!(await confirm({ title: 'Approve this refund?', message: 'The amount is sent back to the customer right away.', confirmText: 'Approve' }))) return null;
+        return api.accounts.approveRefund(id);
+      }
+      const reason = await askText({ title: 'Reject refund', message: 'The customer will see this reason.', tone: 'danger', confirmText: 'Reject', input: { placeholder: 'Reason', required: true } });
+      return reason ? api.accounts.rejectRefund(id, reason) : null;
+    },
+    onSuccess: (r) => {
+      if (!r) return;
       qc.invalidateQueries({ queryKey: ['accounts', 'refunds'] });
-      toast.success('Done');
+      toast.success(r.status === 'REJECTED' ? 'Refund rejected' : 'Refund approved', r.status === 'REJECTED' ? undefined : 'The customer has been notified.');
     },
     onError: (e) => toast.error((e as Error).message),
   });

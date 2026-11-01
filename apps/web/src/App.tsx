@@ -16,6 +16,9 @@ const Supply = lazy(() => import('./features/supply'));
 const Accounts = lazy(() => import('./features/accounts'));
 const Delivery = lazy(() => import('./features/delivery'));
 const VendorPortal = lazy(() => import('./features/vendor'));
+const StaffAccount = lazy(() => import('./features/staff'));
+
+const CUSTOMER_ONLY = (el: ReactNode) => <RequireRole roles={['CUSTOMER']}>{el}</RequireRole>;
 
 const STAFF: Role[] = ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'HR', 'DELIVERY', 'VENDOR'];
 
@@ -53,6 +56,10 @@ export function App() {
           <Route path="overview" element={<SuperAdmin page="overview" />} />
           <Route path="areas" element={<SuperAdmin page="areas" />} />
           <Route path="admins" element={<SuperAdmin page="admins" />} />
+          <Route path="profile" element={<StaffAccount page="profile" />} />
+          <Route path="help" element={<StaffAccount page="help" />} />
+          <Route path="terms" element={<StaffAccount page="terms" />} />
+          <Route path="privacy" element={<StaffAccount page="privacy" />} />
           <Route path="*" element={<Navigate to="/admin/overview" replace />} />
         </Route>
 
@@ -97,7 +104,11 @@ export function App() {
           <Route path="vendor/orders/:id" element={<VendorPortal page="order" />} />
           <Route path="vendor/rates" element={<VendorPortal page="rates" />} />
           <Route path="vendor/ledger" element={<VendorPortal page="ledger" />} />
-          <Route path="notifications" element={<Shop page="notifications" />} />
+          <Route path="notifications" element={<Shop page="staff-notifications" />} />
+          <Route path="profile" element={<StaffAccount page="profile" />} />
+          <Route path="help" element={<StaffAccount page="help" />} />
+          <Route path="terms" element={<StaffAccount page="terms" />} />
+          <Route path="privacy" element={<StaffAccount page="privacy" />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
 
@@ -131,14 +142,15 @@ export function App() {
               </RequireRole>
             }
           />
-          <Route
-            path="account"
-            element={
-              <RequireRole roles={['CUSTOMER']}>
-                <Shop page="account" />
-              </RequireRole>
-            }
-          />
+          <Route path="categories" element={<Shop page="categories" />} />
+          <Route path="account" element={CUSTOMER_ONLY(<Shop page="account" />)} />
+          <Route path="account/profile" element={CUSTOMER_ONLY(<Shop page="profile" />)} />
+          <Route path="account/addresses" element={CUSTOMER_ONLY(<Shop page="addresses" />)} />
+          <Route path="account/settings" element={CUSTOMER_ONLY(<Shop page="settings" />)} />
+          <Route path="help" element={<Shop page="help" />} />
+          <Route path="terms" element={<Shop page="terms" />} />
+          <Route path="privacy" element={<Shop page="privacy" />} />
+          <Route path="about" element={<Shop page="about" />} />
           <Route
             path="notifications"
             element={

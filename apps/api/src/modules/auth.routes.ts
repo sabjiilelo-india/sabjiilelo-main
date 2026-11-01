@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import {
   APP_ROLES,
   adminLoginSchema,
+  deleteAccountSchema,
   otpRequestSchema,
   otpVerifySchema,
   pushTokenSchema,
@@ -107,9 +108,36 @@ authRouter.get('/me', authenticate, async (req, res) => {
 });
 
 authRouter.patch('/me', authenticate, async (req, res) => {
-  const { name } = body(req, updateMeSchema);
-  const user = await prisma.user.update({ where: { id: me(req).sub }, data: { name }, include: userWithArea });
+  const data = body(req, updateMeSchema);
+  const user = await prisma.user.update({ where: { id: me(req).sub }, data, include: userWithArea });
   res.json(toAuthUser(user));
+});
+
+/**
+ * Self-service account deletion (customers only; staff are removed by their admin).
+ * Personal data is erased and the phone number is freed; orders stay for invoices and tax records.
+ */
+authRouter.delete('/me', authenticate, async (req, res) => {
+  body(req, deleteAccountSchema);
+  const u = me(req);
+  if (u.role !== 'CUSTOMER') throw forbidden('Staff accounts are removed by your area admin');
+  const active = await prisma.order.count({
+    where: { customerId: u.sub, status: { in: ['PAYMENT_PENDING', 'PLACED', 'CONFIRMED', 'PACKING', 'PACKED', 'ASSIGNED', 'OUT_FOR_DELIVERY'] } },
+  });
+  if (active) throw new AppError(409, 'ACTIVE_ORDERS', 'You have orders in progress. Please wait until they are delivered or cancel them first.');
+
+  await prisma.$transaction([
+    prisma.cartItem.deleteMany({ where: { userId: u.sub } }),
+    prisma.address.updateMany({ where: { userId: u.sub }, data: { isDeleted: true, isDefault: false, name: 'Deleted', phone: '', line1: 'Deleted', landmark: null, lat: null, lng: null } }),
+    prisma.session.updateMany({ where: { userId: u.sub, revokedAt: null }, data: { revokedAt: new Date() } }),
+    prisma.notification.deleteMany({ where: { userId: u.sub } }),
+    prisma.user.update({
+      where: { id: u.sub },
+      data: { phone: `deleted:${u.sub}`, name: null, email: null, expoPushToken: null, status: 'BLOCKED', deletedAt: new Date() },
+    }),
+  ]);
+  res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+  res.json({ ok: true });
 });
 
 authRouter.post('/push-token', authenticate, async (req, res) => {

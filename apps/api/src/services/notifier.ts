@@ -10,6 +10,8 @@ export interface NotifyInput {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  /** 'offer' pushes respect the user's offers setting; everything else their order-updates setting. */
+  kind?: 'order' | 'offer';
 }
 
 /** Channels beyond in-app + push (WhatsApp, SMS) plug in here later. */
@@ -20,7 +22,11 @@ interface Channel {
 const pushChannel: Channel = {
   async send(userIds, msg) {
     const users = await prisma.user.findMany({
-      where: { id: { in: userIds }, expoPushToken: { not: null } },
+      where: {
+        id: { in: userIds },
+        expoPushToken: { not: null },
+        ...(msg.kind === 'offer' ? { notifyOffers: true } : { notifyOrders: true }),
+      },
       select: { expoPushToken: true },
     });
     const messages: ExpoPushMessage[] = users

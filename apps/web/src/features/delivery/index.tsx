@@ -9,6 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { Badge, Button, Card, EmptyState, Field, MoneyInput, PageHeader, PageLoader, Select, StatCard, StatusBadge, Tabs, Toggle } from '../../components/ui';
 import { ImageUpload } from '../../components/ImageUpload';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 
 export default function Delivery({ page }: { page: 'list' | 'order' }) {
   return page === 'list' ? <MyDeliveries /> : <DeliveryOrder />;
@@ -195,7 +196,7 @@ export function DeliveryOrder() {
             )}
             {o.paymentMode !== 'COD' && payable < o.finalPayablePaise && <p className="mt-2 text-sm text-muted">{formatINR(o.finalPayablePaise - payable)} will be refunded to the customer.</p>}
           </Card>
-          <Button size="lg" block loading={deliver.isPending} onClick={() => deliver.mutate()}>
+          <Button size="lg" block loading={deliver.isPending} onClick={async () => (await confirm({ title: 'Mark as delivered?', message: o.paymentMode === 'COD' ? `Confirm you collected ${formatINR(cash ?? payable)} in cash.` : 'The customer will be notified.', confirmText: 'Delivered' })) && deliver.mutate()}>
             Mark delivered
           </Button>
         </>

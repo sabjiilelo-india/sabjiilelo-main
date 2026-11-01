@@ -6,6 +6,7 @@ import { ROLE_LABEL, type Role, type StaffUser } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Pager, Select, Table, Tabs } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 
 const STAFF_ROLES = ['MANAGER', 'ACCOUNTANT', 'HR', 'DELIVERY', 'VENDOR'] as const;
 type StaffRole = (typeof STAFF_ROLES)[number];
@@ -69,7 +70,7 @@ export function Staff() {
                     <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
                       Edit
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => toggle.mutate(u)}>
+                    <Button size="sm" variant="ghost" onClick={async () => (await confirm(u.status === 'ACTIVE' ? { title: `Block ${u.name ?? u.phone}?`, message: 'They will be signed out and cannot log in until unblocked.', tone: 'danger', confirmText: 'Block' } : { title: `Unblock ${u.name ?? u.phone}?`, confirmText: 'Unblock' })) && toggle.mutate(u)}>
                       {u.status === 'ACTIVE' ? 'Block' : 'Unblock'}
                     </Button>
                   </div>

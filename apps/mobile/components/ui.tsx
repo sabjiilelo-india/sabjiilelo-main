@@ -226,12 +226,12 @@ export function ProduceImage({ uri, name, size, style }: { uri?: string | null; 
 export function Stepper({ qty, onChange, max = 50, small }: { qty: number; onChange: (q: number) => void; max?: number; small?: boolean }) {
   const h = small ? 32 : 40;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: radius.md, height: h, width: small ? 92 : 112, justifyContent: 'space-between' }}>
-      <Pressable hitSlop={8} onPress={() => onChange(qty - 1)} style={{ width: 32, alignItems: 'center' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, borderRadius: radius.md, height: h, width: small ? 84 : 112, justifyContent: 'space-between' }}>
+      <Pressable hitSlop={8} onPress={() => onChange(qty - 1)} style={{ width: 28, alignItems: 'center' }}>
         <Ionicons name="remove" size={18} color="#fff" />
       </Pressable>
       <Text style={{ color: '#fff', fontFamily: font.semibold }}>{qty}</Text>
-      <Pressable hitSlop={8} disabled={qty >= max} onPress={() => onChange(qty + 1)} style={{ width: 32, alignItems: 'center', opacity: qty >= max ? 0.4 : 1 }}>
+      <Pressable hitSlop={8} disabled={qty >= max} onPress={() => onChange(qty + 1)} style={{ width: 28, alignItems: 'center', opacity: qty >= max ? 0.4 : 1 }}>
         <Ionicons name="add" size={18} color="#fff" />
       </Pressable>
     </View>

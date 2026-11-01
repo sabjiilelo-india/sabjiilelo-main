@@ -20,6 +20,7 @@ import {
 import { api } from '../../lib/api';
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, MoneyInput, PageHeader, PageLoader, Select, Table, Tabs, Toggle } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 
 export default function Supply({ page }: { page: 'demand' | 'pos' | 'po' }) {
   if (page === 'demand') return <Demand />;
@@ -332,7 +333,7 @@ function PoDetail() {
         actions={
           receivable && !received ? (
             <>
-              <Button variant="ghost" onClick={() => close.mutate()}>
+              <Button variant="ghost" onClick={async () => (await confirm({ title: 'Close this purchase order?', message: 'Use this when the vendor will not deliver. Nothing is added to stock or payables.', tone: 'danger', confirmText: 'Close PO' })) && close.mutate()}>
                 Close PO
               </Button>
               <Button icon={<PackageCheck size={16} />} onClick={() => setReceived(Object.fromEntries(po.items.map((i) => [i.id, String(fromBaseQty(i.unitType, i.acceptedQty ?? i.orderedQty))])))}>

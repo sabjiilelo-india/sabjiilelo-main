@@ -35,7 +35,20 @@ export const otpVerifySchema = z.object({
 });
 export const adminLoginSchema = z.object({ username: z.string().trim().min(1), password: z.string().min(1) });
 export const refreshSchema = z.object({ refreshToken: z.string().optional() });
-export const updateMeSchema = z.object({ name: z.string().trim().min(1).max(80) });
+export const updateMeSchema = z.object({
+  name: z.string().trim().min(1, 'Enter your name').max(80).optional(),
+  email: z
+    .string()
+    .trim()
+    .email('Enter a valid email')
+    .max(120)
+    .nullable()
+    .optional()
+    .or(z.literal('').transform(() => null)),
+  notifyOrders: z.boolean().optional(),
+  notifyOffers: z.boolean().optional(),
+});
+export const deleteAccountSchema = z.object({ confirm: z.literal('DELETE', { errorMap: () => ({ message: 'Type DELETE to confirm' }) }) });
 export const pushTokenSchema = z.object({ token: z.string().min(1).nullable() });
 
 // ---------- areas & users ----------

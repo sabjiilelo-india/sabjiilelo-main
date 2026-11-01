@@ -7,6 +7,7 @@ import { api } from '../../lib/api';
 import { Badge, Button, Card, Field, Input, Modal, MoneyInput, PageHeader, PageLoader, Select, Table, Toggle } from '../../components/ui';
 import { ImageUpload } from '../../components/ImageUpload';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -289,7 +290,7 @@ export function Banners() {
                 <Button size="sm" variant="outline" onClick={() => setEditing(b)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" className="text-danger" onClick={() => window.confirm('Delete banner?') && del.mutate(b.id)}>
+                <Button size="sm" variant="ghost" className="text-danger" onClick={async () => (await confirm({ title: 'Delete this banner?', message: 'It will disappear from the shop home page.', tone: 'danger', icon: 'delete', confirmText: 'Delete' })) && del.mutate(b.id)}>
                   <Trash2 size={14} />
                 </Button>
               </div>

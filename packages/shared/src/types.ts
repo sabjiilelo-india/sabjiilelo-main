@@ -34,6 +34,10 @@ export interface AuthUser {
   areaId: string | null;
   area: AreaRef | null;
   isOnline: boolean;
+  email: string | null;
+  notifyOrders: boolean;
+  notifyOffers: boolean;
+  createdAt: string;
 }
 
 export interface AuthResponse {

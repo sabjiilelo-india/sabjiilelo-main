@@ -27,6 +27,10 @@ export function toAuthUser(u: UserWithArea): AuthUser {
     areaId: u.areaId,
     area: u.area,
     isOnline: u.isOnline,
+    email: u.email,
+    notifyOrders: u.notifyOrders,
+    notifyOffers: u.notifyOffers,
+    createdAt: u.createdAt.toISOString(),
   };
 }
 

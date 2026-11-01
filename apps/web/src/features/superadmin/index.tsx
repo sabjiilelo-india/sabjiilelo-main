@@ -6,6 +6,7 @@ import { formatINR, type Area } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, MoneyInput, PageHeader, PageLoader, Select, StatCard, Table, Textarea, Toggle } from '../../components/ui';
 import { toast } from '../../components/toast';
+import { confirm } from '../../components/confirm';
 
 export default function SuperAdmin({ page }: { page: 'overview' | 'areas' | 'admins' }) {
   if (page === 'overview') return <Overview />;
@@ -238,7 +239,7 @@ function Admins() {
                   <Button size="sm" variant="outline" onClick={() => setEditing(a)}>
                     Edit
                   </Button>
-                  <Button size="sm" variant={a.status === 'ACTIVE' ? 'ghost' : 'secondary'} onClick={() => toggle.mutate(a)}>
+                  <Button size="sm" variant={a.status === 'ACTIVE' ? 'ghost' : 'secondary'} onClick={async () => (await confirm(a.status === 'ACTIVE' ? { title: `Block ${a.name ?? a.phone}?`, message: 'The admin is signed out and cannot manage the area until unblocked.', tone: 'danger', confirmText: 'Block' } : { title: `Unblock ${a.name ?? a.phone}?`, confirmText: 'Unblock' })) && toggle.mutate(a)}>
                     {a.status === 'ACTIVE' ? 'Block' : 'Unblock'}
                   </Button>
                 </div>

@@ -105,6 +105,7 @@ export function createHttp(config: HttpConfig) {
   return {
     config,
     refresh,
+    request,
     url,
     get: <T>(path: string, query?: Query) => request<T>('GET', path, { query }),
     post: <T>(path: string, body?: unknown, query?: Query) => request<T>('POST', path, { body: body ?? {}, query }),
