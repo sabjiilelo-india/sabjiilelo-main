@@ -57,7 +57,7 @@ opsRouter.get('/orders', requirePermission('viewOrders'), async (req, res) => {
       : {}),
   };
   const [rows, total] = await Promise.all([
-    prisma.order.findMany({ where, include: orderSummaryInclude, orderBy: [{ slotDate: 'asc' }, { createdAt: 'asc' }], skip, take }),
+    prisma.order.findMany({ relationLoadStrategy: 'join', where, include: orderSummaryInclude, orderBy: [{ slotDate: 'asc' }, { createdAt: 'asc' }], skip, take }),
     prisma.order.count({ where }),
   ]);
   res.json({ data: rows.map(toOrderSummary), total, page, pageSize });

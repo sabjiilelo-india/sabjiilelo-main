@@ -81,7 +81,7 @@ catalogRouter.get('/home', async (req, res) => {
   const [banners, categories, items] = await Promise.all([
     prisma.banner.findMany({ where: { areaId: area.id, isActive: true }, orderBy: { sort: 'asc' } }),
     prisma.category.findMany({ where: { areaId: area.id, isActive: true }, orderBy: [{ sort: 'asc' }, { name: 'asc' }] }),
-    prisma.item.findMany({ where: { areaId: area.id, isActive: true }, include: itemInclude, orderBy: { updatedAt: 'desc' }, take: 40 }),
+    prisma.item.findMany({ relationLoadStrategy: 'join', where: { areaId: area.id, isActive: true }, include: itemInclude, orderBy: { updatedAt: 'desc' }, take: 40 }),
   ]);
   const stocked = await withStock(items, area.id, date);
   const body: CatalogHome = {
@@ -108,6 +108,7 @@ catalogRouter.get('/items', async (req, res) => {
   const date = q(req, 'date') ? parse(ymdSchema, q(req, 'date')) : (await catalogDate(area.id)).date;
   const search = q(req, 'q');
   const items = await prisma.item.findMany({
+    relationLoadStrategy: 'join',
     where: {
       areaId: area.id,
       isActive: true,
@@ -125,7 +126,7 @@ catalogRouter.get('/items', async (req, res) => {
 });
 
 catalogRouter.get('/items/:id', async (req, res) => {
-  const item = await prisma.item.findFirst({ where: { id: param(req, 'id'), isActive: true }, include: itemInclude });
+  const item = await prisma.item.findFirst({ relationLoadStrategy: 'join', where: { id: param(req, 'id'), isActive: true }, include: itemInclude });
   if (!item) throw notFound('Item');
   const date = q(req, 'date') ? parse(ymdSchema, q(req, 'date')) : (await catalogDate(item.areaId)).date;
   const [withQty] = await withStock([item], item.areaId, date);

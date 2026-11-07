@@ -1,10 +1,11 @@
 # Render blueprint: API (Node web service) + web app (static site).
-# The database is the existing Neon Postgres (us-east-1), so the API runs in Virginia next to it.
+# The database is Neon Postgres in Singapore (ap-southeast-1); the API runs in Singapore next to it,
+# so each database call takes a few milliseconds instead of a few hundred.
 services:
   - type: web
     name: sabjiilelo-api
     runtime: node
-    region: virginia
+    region: singapore
     plan: starter
     rootDir: .
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sabjiilelo/api build && pnpm --filter @sabjiilelo/api db:deploy
@@ -15,6 +16,7 @@ services:
         value: production
       - key: NODE_VERSION
         value: 22.19.0
+      # Use Neon's DIRECT address (host without '-pooler') plus ?connection_limit=10 for this long-running server.
       - key: DATABASE_URL
         sync: false
       - key: DIRECT_URL

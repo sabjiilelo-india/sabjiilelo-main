@@ -141,7 +141,7 @@ customerRouter.get('/orders', async (req, res) => {
   const { skip, take, page, pageSize } = pageParams(req);
   const where = { customerId: me(req).sub };
   const [rows, total] = await Promise.all([
-    prisma.order.findMany({ where, include: orderSummaryInclude, orderBy: { createdAt: 'desc' }, skip, take }),
+    prisma.order.findMany({ relationLoadStrategy: 'join', where, include: orderSummaryInclude, orderBy: { createdAt: 'desc' }, skip, take }),
     prisma.order.count({ where }),
   ]);
   res.json({ data: rows.map(toOrderSummary), total, page, pageSize });

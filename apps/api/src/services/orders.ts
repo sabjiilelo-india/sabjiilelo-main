@@ -30,7 +30,7 @@ import { gateway } from './payments';
 import { notify } from './notifier';
 import { nextInvoiceNo, nextOrderNo } from './numbering';
 import { slotOptions } from './slots';
-import { bookSlot, releaseSlot, releaseStock, remainingByItem, reserveStock } from './stock';
+import { bookSlot, releaseSlot, releaseStock, releaseStockBulk, remainingByItem, reserveStock } from './stock';
 
 export interface Actor {
   id: string;
@@ -159,7 +159,7 @@ export function toOrderDetail(o: OrderFull, viewer?: { id: string; role: Role })
 }
 
 export async function loadOrder(id: string, tx: Tx = prisma): Promise<OrderFull> {
-  const o = await tx.order.findUnique({ where: { id }, include: orderInclude });
+  const o = await tx.order.findUnique({ relationLoadStrategy: 'join', where: { id }, include: orderInclude });
   if (!o) throw notFound('Order');
   return o;
 }
@@ -182,7 +182,7 @@ async function loadCart(userId: string, areaId: string, date: string) {
   // The area's stock for the date is small, so fetch it alongside the cart instead of after it.
   const [rows, remaining] = await Promise.all([
     prisma.cartItem.findMany({
-      where: { userId, variant: { item: { areaId } } },
+      relationLoadStrategy: 'join', where: { userId, variant: { item: { areaId } } },
       include: { variant: { include: { item: true } } },
       orderBy: { updatedAt: 'asc' },
     }),
@@ -223,7 +223,7 @@ export async function getCart(userId: string, areaId: string, date: string) {
 async function resolveAddress(userId: string, addressId: string) {
   const address = await prisma.address.findFirst({ where: { id: addressId, userId, isDeleted: false } });
   if (!address) throw notFound('Address');
-  const pin = await prisma.areaPincode.findUnique({ where: { pincode: address.pincode }, include: { area: true } });
+  const pin = await prisma.areaPincode.findUnique({ relationLoadStrategy: 'join', where: { pincode: address.pincode }, include: { area: true } });
   if (!pin || !pin.area.isActive) throw badRequest('We do not deliver to this pincode yet');
   return { address, area: pin.area };
 }
@@ -505,11 +505,14 @@ export async function cancelOrder(orderId: string, actor: Actor, reason: string)
     await tx.order.update({ where: { id: o.id }, data: { status: 'CANCELLED', cancelReason: reason, riderId: null } });
     await addEvent(tx, o.id, 'CANCELLED', actor, reason);
     if (o.slotDate) {
-      for (const it of o.items) {
-        const reserved = (it.packedQty ?? it.qty) * it.baseQty;
-        await releaseStock(tx, o.areaId, o.slotDate, it.itemId, reserved);
-        await tx.stockMovement.create({ data: { areaId: o.areaId, itemId: it.itemId, type: 'RELEASE', qty: reserved, refType: 'Order', refId: o.id } });
-      }
+      // One statement for the stock and one for the ledger, however many items the order has.
+      const back = new Map<string, number>();
+      for (const it of o.items) back.set(it.itemId, (back.get(it.itemId) ?? 0) + (it.packedQty ?? it.qty) * it.baseQty);
+      const entries = [...back].map(([itemId, qty]) => ({ itemId, qty }));
+      await releaseStockBulk(tx, o.areaId, o.slotDate, entries);
+      await tx.stockMovement.createMany({
+        data: entries.map((e) => ({ areaId: o.areaId, itemId: e.itemId, type: 'RELEASE' as const, qty: e.qty, refType: 'Order', refId: o.id })),
+      });
     }
     await releaseSlot(tx, o.slotId, o.slotDate);
     if (o.couponId) {

@@ -45,6 +45,18 @@ export async function releaseStock(tx: Tx, areaId: string, date: Date, itemId: s
     WHERE "itemId" = ${itemId} AND "date" = ${date} AND "areaId" = ${areaId}`;
 }
 
+/** Returns stock for several items in ONE statement (cancellations). Never drops below zero. */
+export async function releaseStockBulk(tx: Tx, areaId: string, date: Date, entries: { itemId: string; qty: number }[]) {
+  const list = entries.filter((e) => e.qty > 0);
+  if (!list.length) return;
+  const ids = list.map((e) => e.itemId);
+  const qtys = list.map((e) => e.qty);
+  await tx.$executeRaw`
+    UPDATE "DailyStock" ds SET "reservedQty" = GREATEST(0, ds."reservedQty" - v.qty), "updatedAt" = NOW()
+    FROM unnest(${ids}::text[], ${qtys}::int[]) AS v(id, qty)
+    WHERE ds."itemId" = v.id AND ds."date" = ${date} AND ds."areaId" = ${areaId}`;
+}
+
 /** Books one unit of slot capacity atomically (insert-or-increment in a single statement). */
 export async function bookSlot(tx: Tx, slotId: string, date: string, capacity: number) {
   const d = ymdToDate(date);

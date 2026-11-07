@@ -13,12 +13,11 @@ import { prisma } from '../lib/prisma';
 export async function slotOptions(areaId: string, days = 3, now = new Date()): Promise<SlotOption[]> {
   const today = todayIST();
   const dates = Array.from({ length: days }, (_, i) => addDays(today, i));
-  const slots = await prisma.deliverySlot.findMany({ where: { areaId, isActive: true }, orderBy: [{ sort: 'asc' }, { startTime: 'asc' }] });
+  const [slots, bookings] = await Promise.all([
+    prisma.deliverySlot.findMany({ where: { areaId, isActive: true }, orderBy: [{ sort: 'asc' }, { startTime: 'asc' }] }),
+    prisma.slotBooking.findMany({ where: { slot: { areaId }, date: { in: dates.map(ymdToDate) } } }),
+  ]);
   if (!slots.length) return [];
-
-  const bookings = await prisma.slotBooking.findMany({
-    where: { slotId: { in: slots.map((s) => s.id) }, date: { in: dates.map(ymdToDate) } },
-  });
   const used = new Map(bookings.map((b) => [`${b.slotId}:${b.date.toISOString().slice(0, 10)}`, b.used]));
 
   const out: SlotOption[] = [];
