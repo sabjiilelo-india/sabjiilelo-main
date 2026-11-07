@@ -28,10 +28,10 @@
         "backgroundColor": "#fbf6ea"
       },
       "permissions": [
-        "CAMERA",
-        "POST_NOTIFICATIONS",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -65,7 +65,15 @@
       "typedRoutes": false
     },
     "extra": {
-      "eas": {}
-    }
+      "eas": {
+        "projectId": "6933875c-0b2e-48a8-92ed-25027911865c"
+      },
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      }
+    },
+    "owner": "sap123"
   }
 }
