@@ -3,7 +3,7 @@
 # so each database call takes a few milliseconds instead of a few hundred.
 services:
   - type: web
-    name: sabjiilelo-api
+    name: sabjiilelo-main-server
     runtime: node
     region: singapore
     plan: starter
@@ -26,9 +26,9 @@ services:
       - key: REFRESH_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://sabjiilelo-web.onrender.com
+        value: https://sabjiilelo-main-client.onrender.com
       - key: PUBLIC_URL
-        value: https://sabjiilelo-api.onrender.com
+        value: https://sabjiilelo-main-server.onrender.com
       - key: OTP_MODE
         value: fixed
       - key: OTP_FIXED
@@ -48,7 +48,7 @@ services:
         sync: false
 
   - type: web
-    name: sabjiilelo-web
+    name: sabjiilelo-main-client
     runtime: static
     rootDir: .
     buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sabjiilelo/web build
@@ -60,10 +60,10 @@ services:
       # Same-origin API keeps the refresh cookie first-party (no third-party cookie issues).
       - type: rewrite
         source: /api/*
-        destination: https://sabjiilelo-api.onrender.com/api/*
+        destination: https://sabjiilelo-main-server.onrender.com/api/*
       - type: rewrite
         source: /uploads/*
-        destination: https://sabjiilelo-api.onrender.com/uploads/*
+        destination: https://sabjiilelo-main-server.onrender.com/uploads/*
       - type: rewrite
         source: /*
         destination: /index.html

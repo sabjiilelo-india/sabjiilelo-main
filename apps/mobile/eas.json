@@ -4,16 +4,16 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EXPO_PUBLIC_API_URL": "https://sabjiilelo-api.onrender.com/api" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://sabjiilelo-main-server.onrender.com/api" }
     },
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://sabjiilelo-api.onrender.com/api" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://sabjiilelo-main-server.onrender.com/api" }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://sabjiilelo-api.onrender.com/api" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://sabjiilelo-main-server.onrender.com/api" }
     }
   },
   "submit": { "production": {} }
