@@ -8,7 +8,7 @@ services:
     region: singapore
     plan: starter
     rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sabjiilelo/api build && pnpm --filter @sabjiilelo/api db:deploy
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sabjiilelo/api build && pnpm --filter @sabjiilelo/api db:deploy
     startCommand: cd apps/api && node dist/server.js
     healthCheckPath: /health
     envVars:
@@ -51,7 +51,7 @@ services:
     name: sabjiilelo-web
     runtime: static
     rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @sabjiilelo/web build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sabjiilelo/web build
     staticPublishPath: apps/web/dist
     envVars:
       - key: VITE_API_URL
