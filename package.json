@@ -12,7 +12,8 @@
     "test": "turbo run test",
     "db:migrate": "pnpm --filter @sabjiilelo/api db:migrate",
     "db:seed": "pnpm --filter @sabjiilelo/api db:seed",
-    "dev:mobile:web": "pnpm --filter @sabjiilelo/mobile web"
+    "dev:mobile:web": "pnpm --filter @sabjiilelo/mobile web",
+    "dev:mobile:tunnel": "pnpm --filter @sabjiilelo/mobile start:tunnel"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

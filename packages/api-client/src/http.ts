@@ -80,7 +80,8 @@ export function createHttp(config: HttpConfig) {
         body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
       });
     } catch {
-      throw new ApiError(0, 'NETWORK', 'No internet connection. Please check and try again.');
+      const host = /^https?:///.test(config.baseUrl) ? config.baseUrl.replace(/^https?:///, '').split('/')[0] : null;
+      throw new ApiError(0, 'NETWORK', host ? `Can't reach the server (${host}). Check your connection, and that your phone is on the same Wi-Fi as the server.` : 'No internet connection. Please check and try again.');
     }
 
     if (res.status === 401 && retry && !path.startsWith('/auth/')) {
