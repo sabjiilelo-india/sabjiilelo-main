@@ -15,7 +15,8 @@
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "db:seed:demo": "tsx --env-file-if-exists=.env prisma/seed-demo.ts"
+    "db:seed:demo": "tsx --env-file-if-exists=.env prisma/seed-demo.ts",
+    "db:seed:images": "tsx --env-file-if-exists=.env prisma/seed-images.ts"
   },
   "dependencies": {
     "@prisma/client": "~6.16.2",

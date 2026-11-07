@@ -9,6 +9,7 @@
     "src",
     "prisma/seed.ts",
     "test",
-    "prisma/seed-demo.ts"
+    "prisma/seed-demo.ts",
+    "prisma/seed-images.ts"
   ]
 }

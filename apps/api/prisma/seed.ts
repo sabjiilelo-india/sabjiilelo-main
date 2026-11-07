@@ -46,6 +46,48 @@ const ITEMS: SeedItem[] = [
   { name: 'Mushroom (Button)', cat: 'Exotic', unit: 'PACK', stock: 50, variants: [['200 g pack', 1, 45, 55]], hsn: '0709' },
   { name: 'Kiwi', cat: 'Exotic', unit: 'PIECE', stock: 120, variants: [['3 pcs', 3, 75, 90]], hsn: '0810' },
   { name: 'Coconut (Tender)', cat: 'Daily Essentials', unit: 'PIECE', stock: 80, variants: [['1 pc', 1, 45, 55]], hsn: '0801' },
+  // more vegetables
+  { name: 'Pumpkin (Kaddu)', cat: 'Fresh Vegetables', unit: 'KG', stock: 25000, variants: [['500 g', 500, 18, 24], ['1 kg', 1000, 34, 44]], hsn: '0709' },
+  { name: 'Bitter Gourd (Karela)', cat: 'Fresh Vegetables', unit: 'KG', stock: 12000, variants: [['250 g', 250, 15, 20], ['500 g', 500, 28, 36]], hsn: '0709' },
+  { name: 'Ridge Gourd (Turai)', cat: 'Fresh Vegetables', unit: 'KG', stock: 12000, variants: [['500 g', 500, 24, 30]], hsn: '0709' },
+  { name: 'Radish (Mooli)', cat: 'Fresh Vegetables', unit: 'KG', stock: 15000, variants: [['500 g', 500, 14, 18]], hsn: '0706' },
+  { name: 'Beetroot', cat: 'Fresh Vegetables', unit: 'KG', stock: 15000, variants: [['500 g', 500, 22, 28]], hsn: '0706' },
+  { name: 'Sweet Potato (Shakarkandi)', cat: 'Fresh Vegetables', unit: 'KG', stock: 15000, variants: [['500 g', 500, 28, 35]], hsn: '0714' },
+  { name: 'French Beans', cat: 'Fresh Vegetables', unit: 'KG', stock: 12000, variants: [['250 g', 250, 20, 26], ['500 g', 500, 38, 48]], hsn: '0708' },
+  { name: 'Cluster Beans (Gawar)', cat: 'Fresh Vegetables', unit: 'KG', stock: 8000, variants: [['250 g', 250, 18, 24]], hsn: '0708' },
+  { name: 'Drumstick', cat: 'Fresh Vegetables', unit: 'KG', stock: 8000, variants: [['250 g', 250, 25, 32]], hsn: '0709' },
+  { name: 'Raw Banana', cat: 'Fresh Vegetables', unit: 'PIECE', stock: 150, variants: [['2 pcs', 2, 20, 26]], hsn: '0803' },
+  { name: 'Tinda', cat: 'Fresh Vegetables', unit: 'KG', stock: 8000, variants: [['500 g', 500, 26, 34]], hsn: '0709' },
+  { name: 'Spring Onion', cat: 'Fresh Vegetables', unit: 'BUNCH', stock: 100, variants: [['1 bunch', 1, 15, 20]], hsn: '0703' },
+  { name: 'Red Onion (Small, Sambhar)', cat: 'Fresh Vegetables', unit: 'KG', stock: 10000, variants: [['500 g', 500, 40, 50]], hsn: '0703' },
+  { name: 'Baby Corn', cat: 'Fresh Vegetables', unit: 'PACK', stock: 40, variants: [['200 g pack', 1, 35, 45]], hsn: '0709' },
+  // leafy & herbs
+  { name: 'Curry Leaves', cat: 'Leafy & Herbs', unit: 'BUNCH', stock: 120, variants: [['1 bunch', 1, 8, 10]], hsn: '0709' },
+  { name: 'Dill (Sua)', cat: 'Leafy & Herbs', unit: 'BUNCH', stock: 80, variants: [['1 bunch', 1, 12, 15]], hsn: '0709' },
+  { name: 'Mustard Greens (Sarson)', cat: 'Leafy & Herbs', unit: 'BUNCH', stock: 80, variants: [['1 bunch', 1, 18, 24]], hsn: '0709' },
+  { name: 'Raw Turmeric (Haldi)', cat: 'Leafy & Herbs', unit: 'KG', stock: 4000, variants: [['100 g', 100, 16, 20]], hsn: '0910' },
+  // fruits
+  { name: 'Mango (Dussehri)', cat: 'Fresh Fruits', unit: 'KG', stock: 30000, variants: [['1 kg', 1000, 110, 130]], source: 'Malihabad', hsn: '0804' },
+  { name: 'Grapes (Green, Seedless)', cat: 'Fresh Fruits', unit: 'KG', stock: 20000, variants: [['500 g', 500, 60, 75]], source: 'Nashik', hsn: '0806' },
+  { name: 'Guava (Amrood)', cat: 'Fresh Fruits', unit: 'KG', stock: 20000, variants: [['500 g', 500, 40, 50]], hsn: '0804' },
+  { name: 'Sweet Lime (Mosambi)', cat: 'Fresh Fruits', unit: 'KG', stock: 25000, variants: [['1 kg', 1000, 70, 85]], hsn: '0805' },
+  { name: 'Pear (Nashpati)', cat: 'Fresh Fruits', unit: 'KG', stock: 15000, variants: [['500 g', 500, 70, 85]], hsn: '0808' },
+  { name: 'Pineapple', cat: 'Fresh Fruits', unit: 'PIECE', stock: 40, variants: [['1 pc (~1 kg)', 1, 70, 85]], hsn: '0804' },
+  { name: 'Muskmelon (Kharbuja)', cat: 'Fresh Fruits', unit: 'PIECE', stock: 40, variants: [['1 pc (~1.2 kg)', 1, 55, 70]], hsn: '0807' },
+  { name: 'Chikoo (Sapota)', cat: 'Fresh Fruits', unit: 'KG', stock: 12000, variants: [['500 g', 500, 40, 50]], hsn: '0810' },
+  { name: 'Custard Apple (Sitaphal)', cat: 'Fresh Fruits', unit: 'KG', stock: 8000, variants: [['500 g', 500, 70, 90]], hsn: '0810' },
+  { name: 'Banana (Elaichi)', cat: 'Fresh Fruits', unit: 'DOZEN', stock: 60, variants: [['1 dozen', 1, 80, 95]], hsn: '0803' },
+  // exotic
+  { name: 'Zucchini', cat: 'Exotic', unit: 'PIECE', stock: 40, variants: [['1 pc (~250 g)', 1, 40, 50]], hsn: '0709' },
+  { name: 'Red Bell Pepper', cat: 'Exotic', unit: 'PIECE', stock: 50, variants: [['1 pc', 1, 45, 60]], hsn: '0709' },
+  { name: 'Yellow Bell Pepper', cat: 'Exotic', unit: 'PIECE', stock: 50, variants: [['1 pc', 1, 45, 60]], hsn: '0709' },
+  { name: 'Cherry Tomato', cat: 'Exotic', unit: 'PACK', stock: 40, variants: [['200 g pack', 1, 50, 65]], hsn: '0702' },
+  { name: 'Iceberg Lettuce', cat: 'Exotic', unit: 'PIECE', stock: 40, variants: [['1 pc', 1, 50, 65]], hsn: '0705' },
+  { name: 'Avocado', cat: 'Exotic', unit: 'PIECE', stock: 30, variants: [['1 pc', 1, 120, 150]], hsn: '0804' },
+  { name: 'Dragon Fruit', cat: 'Exotic', unit: 'PIECE', stock: 30, variants: [['1 pc', 1, 90, 110]], hsn: '0810' },
+  // daily essentials
+  { name: 'Coriander + Chilli Combo', cat: 'Daily Essentials', unit: 'PACK', stock: 80, variants: [['1 combo', 1, 20, 25]], hsn: '0709' },
+  { name: 'Salad Pack (Cucumber, Carrot, Beet)', cat: 'Daily Essentials', unit: 'PACK', stock: 60, variants: [['500 g pack', 1, 45, 55]], hsn: '0709' },
 ];
 
 const paise = (r: number) => Math.round(r * 100);
