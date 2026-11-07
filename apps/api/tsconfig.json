@@ -1,7 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src", "prisma/seed.ts", "test"]
+  "include": [
+    "src",
+    "prisma/seed.ts",
+    "test",
+    "prisma/seed-demo.ts"
+  ]
 }

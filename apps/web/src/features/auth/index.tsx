@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Lock, Phone, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
+import { canAutoFocus } from '../../lib/device';
 import { homeFor, useAuth } from '../../lib/auth';
 import { Button, Field, Input, PageLoader } from '../../components/ui';
 
@@ -71,7 +72,7 @@ function OtpLogin() {
       setHint(r.devHint ? `Testing mode: use OTP ${r.devHint}` : null);
       setStep('otp');
       setResendIn(30);
-      setTimeout(() => otpRef.current?.focus(), 50);
+      if (canAutoFocus) setTimeout(() => otpRef.current?.focus(), 50);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -90,7 +91,7 @@ function OtpLogin() {
     } catch (e) {
       setError((e as Error).message);
       setCode('');
-      otpRef.current?.focus();
+      if (canAutoFocus) otpRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -116,7 +117,7 @@ function OtpLogin() {
                 <Phone size={14} /> +91
               </span>
               <Input
-                autoFocus
+                autoFocus={canAutoFocus}
                 inputMode="numeric"
                 maxLength={10}
                 placeholder="98765 43210"
@@ -228,7 +229,7 @@ function SuperAdminLogin() {
         <p className="mt-1 text-sm text-muted">Restricted area. Area staff should use the OTP login.</p>
         {user && <p className="mt-3 rounded-lg bg-accent/10 px-3 py-2 text-sm text-[#c25a14]">You are signed in as {user.role.toLowerCase()}. Log out first to use this page.</p>}
         <Field label="Username" className="mt-6">
-          <Input autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <Input autoFocus={canAutoFocus} autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
         </Field>
         <Field label="Password" className="mt-4">
           <Input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />

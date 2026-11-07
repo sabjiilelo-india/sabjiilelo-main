@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { canAutoFocus } from '../lib/device';
 import { AlertTriangle, HelpCircle, LogOut, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -59,7 +60,7 @@ export function ConfirmHost() {
     if (!req) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close(null);
     document.addEventListener('keydown', onKey);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    if (canAutoFocus) setTimeout(() => inputRef.current?.focus(), 50);
     return () => document.removeEventListener('keydown', onKey);
   });
 

@@ -33,7 +33,6 @@ export default function Login() {
       setHint(r.devHint ? `Testing mode: OTP is ${r.devHint}` : null);
       setStep('otp');
       setResendIn(30);
-      setTimeout(() => otpRef.current?.focus(), 100);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -51,7 +50,6 @@ export default function Login() {
     } catch (e) {
       setError((e as Error).message);
       setCode('');
-      otpRef.current?.focus();
     } finally {
       setBusy(false);
     }
@@ -81,7 +79,6 @@ export default function Login() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Input
-                    autoFocus
                     keyboardType="number-pad"
                     maxLength={10}
                     placeholder="98765 43210"

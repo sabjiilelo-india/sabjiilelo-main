@@ -5,6 +5,7 @@ import { Minus, Plus, Printer, Search, Trash2, Truck } from 'lucide-react';
 import { qk } from '@sabjiilelo/api-client';
 import { formatDateLabel, formatINR, formatQty, todayIST, type Variant } from '@sabjiilelo/shared';
 import { api, openBlob } from '../../lib/api';
+import { canAutoFocus } from '../../lib/device';
 import { Badge, Button, Card, EmptyState, Field, Input, MoneyInput, PageHeader, PageLoader, Select, Table, Tabs } from '../../components/ui';
 import { ProduceImage } from '../../components/ProduceImage';
 import { toast } from '../../components/toast';
@@ -243,7 +244,7 @@ export function Pos() {
         <div>
           <div className="relative mb-4">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <Input autoFocus placeholder="Search item" className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input autoFocus={canAutoFocus} placeholder="Search item" className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           {items.isLoading ? (
             <PageLoader />
