@@ -13,6 +13,13 @@ import {
   phoneSchema,
   slotCutoff,
   toBaseQty,
+  COD_FEE_PAISE,
+  COIN_VALUE_PAISE,
+  coinsEarned,
+  deliveryEta,
+  haversineKm,
+  maxCoinsUsable,
+  nutritionFor,
   addDays,
   appPathFor,
   notificationTarget,
@@ -81,8 +88,8 @@ describe('units', () => {
 
 describe('dates', () => {
   it('computes slot cutoff in IST', () => {
-    // 7:00 IST on 2026-11-02 = 01:30 UTC; 10h earlier = 15:30 UTC on 2026-11-01
-    expect(slotCutoff('2026-11-02', '07:00', 600).toISOString()).toBe('2026-11-01T15:30:00.000Z');
+    // Window closes 23:00 IST on 2026-11-02 = 17:30 UTC; orders stop 60 min before = 16:30 UTC
+    expect(slotCutoff('2026-11-02', '23:00', 60).toISOString()).toBe('2026-11-02T16:30:00.000Z');
   });
 
   it('handles day math and financial year', () => {
@@ -99,12 +106,18 @@ describe('order machine', () => {
     expect(canTransition('PLACED', 'CONFIRMED', 'MANAGER')).toBe(true);
     expect(canTransition('PLACED', 'CONFIRMED', 'CUSTOMER')).toBe(false);
     expect(canTransition('PLACED', 'CANCELLED', 'CUSTOMER')).toBe(true);
-    expect(canTransition('PACKED', 'CANCELLED', 'CUSTOMER')).toBe(false);
+    // Open-box delivery: customers can cancel right up until handover.
+    expect(canTransition('PACKED', 'CANCELLED', 'CUSTOMER')).toBe(true);
+    expect(canTransition('OUT_FOR_DELIVERY', 'CANCELLED', 'CUSTOMER')).toBe(true);
+    expect(canTransition('ARRIVED', 'CANCELLED', 'CUSTOMER')).toBe(true);
+    expect(canTransition('ARRIVED', 'DELIVERED', 'DELIVERY')).toBe(true);
+    expect(canTransition('ARRIVED', 'DELIVERED', 'CUSTOMER')).toBe(false);
+    expect(canTransition('DELIVERED', 'CANCELLED', 'CUSTOMER')).toBe(false);
     expect(canTransition('ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERY')).toBe(true);
     expect(canTransition('PAYMENT_PENDING', 'PLACED', 'ADMIN')).toBe(false);
     expect(canTransition('PAYMENT_PENDING', 'PLACED', 'SYSTEM')).toBe(true);
     expect(canTransition('DELIVERED', 'CANCELLED', 'ADMIN')).toBe(false);
-    expect(nextStatuses('OUT_FOR_DELIVERY', 'DELIVERY')).toEqual(['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED']);
+    expect(nextStatuses('OUT_FOR_DELIVERY', 'DELIVERY')).toEqual(['ARRIVED', 'DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED']);
   });
 });
 
@@ -130,3 +143,82 @@ describe('notification routing', () => {
     expect(appPathFor('VENDOR', { kind: 'po', id: 'p1' })).toBe('/vendor-po/p1');
   });
 });
+
+describe('cash on delivery and coins', () => {
+  const lines = [{ pricePaise: 20000, qty: 1 }]; // Rs 200, delivery Rs 25 (free above Rs 299)
+
+  it('adds the COD fee only for cash orders', () => {
+    expect(COD_FEE_PAISE).toBe(500);
+    expect(computeTotals(lines, fees).totalPaise).toBe(22500);
+    const cod = computeTotals(lines, fees, null, { cod: true });
+    expect(cod.codFeePaise).toBe(500);
+    expect(cod.totalPaise).toBe(23000);
+  });
+
+  it('keeps the COD fee in what is finally owed, and drops everything if all items were rejected', () => {
+    expect(finalPayable(10000, 0, 2500, 500)).toBe(13000);
+    expect(finalPayable(0, 0, 2500, 500)).toBe(0);
+  });
+
+  it('caps coin use at 20% of the bill and at the balance', () => {
+    expect(maxCoinsUsable(20000, 1000)).toBe(40); // 20% of Rs 200
+    expect(maxCoinsUsable(20000, 15)).toBe(15);
+    expect(maxCoinsUsable(20000, 0)).toBe(0);
+    const t = computeTotals(lines, fees, null, { coinBalance: 100, useCoins: true });
+    expect(t.coinsUsed).toBe(40);
+    expect(t.coinDiscountPaise).toBe(40 * COIN_VALUE_PAISE);
+    expect(t.totalPaise).toBe(22500 - 4000);
+    expect(computeTotals(lines, fees, null, { coinBalance: 100 }).coinsUsed).toBe(0);
+  });
+
+  it('earns 2% of what was paid, rounded down to whole coins', () => {
+    expect(coinsEarned(50000)).toBe(10); // Rs 500 -> 10 coins
+    expect(coinsEarned(4900)).toBe(0);
+    expect(coinsEarned(0)).toBe(0);
+  });
+});
+
+describe('delivery estimate', () => {
+  it('measures distance and rounds the estimate to 5 minutes', () => {
+    const jabalpur = { lat: 23.1815, lng: 79.9864 };
+    expect(haversineKm(jabalpur, jabalpur)).toBe(0);
+    const km = haversineKm(jabalpur, { lat: 23.2, lng: 80.05 });
+    expect(km).toBeGreaterThan(5);
+    expect(km).toBeLessThan(8);
+    const near = deliveryEta(1);
+    const far = deliveryEta(8);
+    expect(near.maxMinutes).toBeGreaterThan(near.minMinutes);
+    expect(far.minMinutes).toBeGreaterThan(near.minMinutes);
+    expect(near.minMinutes % 5).toBe(0);
+  });
+});
+
+describe('nutrition', () => {
+  it('matches specific names before general ones', () => {
+    expect(nutritionFor('Sweet Potato (Shakarkandi)')?.tag).toBe('Rich in Vitamin A');
+    expect(nutritionFor('Potato')?.tag).toBe('Good source of Potassium');
+    expect(nutritionFor('Pineapple')?.calories).toBe(50);
+    expect(nutritionFor('Custard Apple (Sitaphal)')?.calories).toBe(94);
+    expect(nutritionFor('Apple (Shimla)')?.calories).toBe(52);
+    expect(nutritionFor('Pear (Nashpati)')?.calories).toBe(57);
+    expect(nutritionFor('Green Peas')?.protein).toBe(5.4);
+    expect(nutritionFor('Cluster Beans (Gawar)')?.fibre).toBe(4.9);
+    expect(nutritionFor('Spring Onion')?.tag).toBe('Rich in Vitamin K');
+    expect(nutritionFor('Something unknown')).toBeNull();
+  });
+
+  it('covers every seeded catalog item', () => {
+    const names = [
+      'Tomato (Desi)', 'Potato', 'Onion', 'Carrot', 'Cucumber', 'Green Capsicum', 'Brinjal (Bharta)', 'Cauliflower', 'Cabbage', 'Bottle Gourd (Lauki)',
+      'Green Peas', 'Lady Finger (Bhindi)', 'Green Chilli', 'Ginger', 'Garlic', 'Coriander (Dhania)', 'Spinach (Palak)', 'Methi', 'Mint (Pudina)', 'Lemon',
+      'Banana (Robusta)', 'Apple (Shimla)', 'Papaya', 'Pomegranate', 'Orange (Nagpur)', 'Watermelon', 'Broccoli', 'Mushroom (Button)', 'Kiwi', 'Coconut (Tender)',
+      'Pumpkin (Kaddu)', 'Bitter Gourd (Karela)', 'Ridge Gourd (Turai)', 'Radish (Mooli)', 'Beetroot', 'Sweet Potato (Shakarkandi)', 'French Beans', 'Cluster Beans (Gawar)',
+      'Drumstick', 'Raw Banana', 'Tinda', 'Spring Onion', 'Red Onion (Small, Sambhar)', 'Baby Corn', 'Curry Leaves', 'Dill (Sua)', 'Mustard Greens (Sarson)',
+      'Raw Turmeric (Haldi)', 'Mango (Dussehri)', 'Grapes (Green, Seedless)', 'Guava (Amrood)', 'Sweet Lime (Mosambi)', 'Pear (Nashpati)', 'Pineapple',
+      'Muskmelon (Kharbuja)', 'Chikoo (Sapota)', 'Custard Apple (Sitaphal)', 'Banana (Elaichi)', 'Zucchini', 'Red Bell Pepper', 'Yellow Bell Pepper', 'Cherry Tomato',
+      'Iceberg Lettuce', 'Avocado', 'Dragon Fruit', 'Coriander + Chilli Combo', 'Salad Pack (Cucumber, Carrot, Beet)',
+    ];
+    expect(names.filter((n) => !nutritionFor(n))).toEqual([]);
+  });
+});
+

@@ -154,6 +154,7 @@ const STATUS_TONE: Record<OrderStatus, Tone> = {
   PACKED: 'orange',
   ASSIGNED: 'orange',
   OUT_FOR_DELIVERY: 'orange',
+  ARRIVED: 'orange',
   DELIVERED: 'green',
   PARTIALLY_DELIVERED: 'green',
   CANCELLED: 'red',

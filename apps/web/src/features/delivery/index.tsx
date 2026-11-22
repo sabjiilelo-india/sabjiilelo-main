@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, MapPin, Navigation, Phone } from 'lucide-react';
+import { ArrowLeft, DoorOpen, MapPin, Navigation, PackageOpen, Phone } from 'lucide-react';
 import { qk } from '@sabjiilelo/api-client';
 import { DOORSTEP_REJECT_REASONS, effectiveLineQty, finalPayable, formatINR, type OrderDetail } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
@@ -71,6 +71,11 @@ export function DeliveryOrder() {
     qc.invalidateQueries({ queryKey: ['rider'] });
   };
   const start = useMutation({ mutationFn: () => api.rider.start(id!), onSuccess: done, onError: (e) => toast.error((e as Error).message) });
+  const arrived = useMutation({
+    mutationFn: () => api.rider.arrived(id!),
+    onSuccess: (o) => (done(o), toast.success('The customer has been told you are at the door')),
+    onError: (e) => toast.error((e as Error).message),
+  });
   const deliver = useMutation({
     mutationFn: () =>
       api.rider.deliver(id!, {
@@ -90,7 +95,8 @@ export function DeliveryOrder() {
   if (q.isLoading || !q.data) return <PageLoader />;
   const o = q.data;
   const effSubtotal = o.items.reduce((s, i) => s + i.pricePaise * Math.max(0, effectiveLineQty(i) - (rej[i.id]?.qty ?? 0)), 0);
-  const payable = finalPayable(effSubtotal, o.discountPaise, o.deliveryFeePaise);
+  const payable = finalPayable(effSubtotal, o.discountPaise, o.deliveryFeePaise, o.codFeePaise);
+  const atDoor = o.status === 'OUT_FOR_DELIVERY' || o.status === 'ARRIVED';
   const mapUrl = o.address
     ? o.address.lat && o.address.lng
       ? `https://www.google.com/maps/dir/?api=1&destination=${o.address.lat},${o.address.lng}`
@@ -130,10 +136,31 @@ export function DeliveryOrder() {
         </div>
       </Card>
 
+      {o.status === 'CANCELLED' && (
+        <div role="alert" className="rounded-2xl bg-danger/10 p-4 text-sm text-danger">
+          <b>This order was cancelled{o.cancelReason ? `: ${o.cancelReason}` : ''}.</b> Please take it back to the store. Nothing to collect.
+        </div>
+      )}
+
       {o.status === 'ASSIGNED' && (
         <Button size="lg" block loading={start.isPending} onClick={() => start.mutate()}>
           Start delivery
         </Button>
+      )}
+
+      {o.status === 'OUT_FOR_DELIVERY' && (
+        <Button size="lg" block variant="secondary" icon={<DoorOpen size={18} />} loading={arrived.isPending} onClick={() => arrived.mutate()}>
+          I've arrived at the door
+        </Button>
+      )}
+
+      {o.status === 'ARRIVED' && (
+        <div className="flex items-start gap-3 rounded-2xl border-2 border-accent bg-accent/10 p-4 text-sm">
+          <PackageOpen size={24} className="shrink-0 text-[#c25a14]" />
+          <span>
+            <b className="text-ink">Open-box delivery.</b> Let the customer open the box and check. They can accept, return items, or reject the whole order.
+          </span>
+        </div>
       )}
 
       {o.status === 'ASSIGNED' && (
@@ -156,7 +183,7 @@ export function DeliveryOrder() {
         </Card>
       )}
 
-      {o.status === 'OUT_FOR_DELIVERY' && (
+      {atDoor && (
         <>
           <Card className="p-5">
             <h2 className="text-base">Check items with the customer</h2>
@@ -205,6 +232,7 @@ export function DeliveryOrder() {
             </div>
           </Card>
           <Card className="p-5">
+            {o.paymentMode === 'COD' && o.codFeePaise > 0 && effSubtotal > 0 && <p className="mb-2 text-xs text-muted">Includes {formatINR(o.codFeePaise)} cash on delivery fee.</p>}
             <div className="flex items-center justify-between text-lg font-semibold">
               <span>{o.paymentMode === 'COD' ? 'Collect cash' : 'Prepaid'}</span>
               <span className={o.paymentMode === 'COD' ? 'text-primary' : 'text-muted'}>{formatINR(payable)}</span>

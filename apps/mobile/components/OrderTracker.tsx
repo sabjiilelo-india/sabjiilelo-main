@@ -9,6 +9,7 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   CONFIRMED: 'thumbs-up-outline',
   PACKED: 'bag-handle-outline',
   OUT_FOR_DELIVERY: 'bicycle',
+  ARRIVED: 'location',
   DELIVERED: 'home-outline',
 };
 

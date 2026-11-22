@@ -110,7 +110,7 @@ opsRouter.get('/riders', requirePermission('viewOrders'), async (req, res) => {
     prisma.user.findMany({ where: { areaId, role: 'DELIVERY', status: 'ACTIVE' }, orderBy: [{ isOnline: 'desc' }, { name: 'asc' }] }),
     prisma.order.groupBy({
       by: ['riderId'],
-      where: { areaId, slotDate: ymdToDate(date), status: { in: ['ASSIGNED', 'OUT_FOR_DELIVERY'] } },
+      where: { areaId, slotDate: ymdToDate(date), status: { in: ['ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'] } },
       _count: true,
     }),
   ]);
@@ -208,6 +208,8 @@ invoiceRouter.get('/:id/:kind.pdf', authenticate, async (req, res) => {
       subtotalPaise: o.subtotalPaise,
       discountPaise: o.discountPaise,
       deliveryFeePaise: o.deliveryFeePaise,
+      codFeePaise: o.codFeePaise,
+      coinDiscountPaise: o.coinDiscountPaise,
       finalPayablePaise: o.finalPayablePaise,
       refundedPaise: o.refunds.filter((r) => r.status === 'PROCESSED').reduce((s, r) => s + r.amountPaise, 0),
     },

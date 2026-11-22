@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { formatINR } from '@sabjiilelo/shared';
 import { useAuth } from '../../lib/auth';
 import { useCart, useShop } from '../../lib/shop';
-import { Button, Card, EmptyState, PageLoader } from '../../components/ui';
+import { Button, Card, EmptyState } from '../../components/ui';
 import { ProduceImage } from '../../components/ProduceImage';
 import { Stepper } from './components';
 
@@ -15,7 +15,19 @@ export function CartPage() {
   if (!user) {
     return <EmptyState icon="/icons/basket.webp" title="Your basket is waiting" text="Log in to add fresh produce to your cart." action={<Link to="/login?next=/cart"><Button>Login</Button></Link>} />;
   }
-  if (isLoading) return <PageLoader />;
+  if (isLoading) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]" aria-busy="true">
+        <div className="space-y-3">
+          <div className="skeleton h-7 w-48" />
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="skeleton h-24 rounded-2xl" />
+          ))}
+        </div>
+        <div className="skeleton h-48 rounded-2xl" />
+      </div>
+    );
+  }
   if (!cart.lines.length) {
     return <EmptyState icon="/icons/basket.webp" title="Your cart is empty" text="Fill it up with farm-fresh vegetables and fruits." action={<Link to="/"><Button>Start shopping</Button></Link>} />;
   }

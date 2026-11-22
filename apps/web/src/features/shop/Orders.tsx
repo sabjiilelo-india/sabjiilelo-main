@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bike, Check, CheckCircle2, ChevronRight, Clock, Download, Home, PartyPopper, Receipt, RefreshCw, ShoppingBag, Star, ThumbsUp } from 'lucide-react';
+import { Bike, Check, CheckCircle2, ChevronRight, Clock, Coins, Download, Home, PackageOpen, PartyPopper, Receipt, RefreshCw, ShoppingBag, Star, ThumbsUp } from 'lucide-react';
 import clsx from 'clsx';
 import { qk } from '@sabjiilelo/api-client';
 import {
@@ -11,6 +11,7 @@ import {
   TRACKING_STEPS,
   effectiveLineQty,
   formatDateLabel,
+  formatEta,
   formatINR,
   formatTime12,
   trackingStepIndex,
@@ -28,7 +29,7 @@ import { useMockPayConfirm } from './Checkout';
 export function OrdersPage() {
   const [page, setPage] = useState(1);
   const q = useQuery({ queryKey: [...qk.myOrders, page], queryFn: () => api.me.orders(page) });
-  if (q.isLoading) return <PageLoader />;
+  if (q.isLoading) return <OrdersSkeleton />;
   if (q.error) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
   if (!q.data?.data.length) return <EmptyState icon="/icons/truck.webp" title="No orders yet" text="Your fresh orders will show up here." action={<Link to="/"><Button>Start shopping</Button></Link>} />;
   return (
@@ -65,6 +66,19 @@ export function OrdersPage() {
   );
 }
 
+function OrdersSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl" aria-busy="true">
+      <div className="skeleton mb-4 h-7 w-32" />
+      <div className="space-y-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="skeleton h-20 rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const STEP_ICON = { PLACED: Receipt, CONFIRMED: ThumbsUp, PACKED: ShoppingBag, OUT_FOR_DELIVERY: Bike, DELIVERED: Home } as const;
 
 function Timeline({ order }: { order: OrderDetail }) {
@@ -76,8 +90,8 @@ function Timeline({ order }: { order: OrderDetail }) {
   const head = TRACKING_HEADLINE[order.status];
   return (
     <div>
-      <div className="mb-6 flex items-center gap-3 rounded-2xl bg-mint p-3.5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-primary">{finished ? <CheckCircle2 size={20} /> : <Clock size={20} />}</span>
+      <div className={clsx('mb-6 flex items-center gap-3 rounded-2xl p-3.5', order.status === 'ARRIVED' ? 'bg-accent/15 ring-2 ring-accent/50' : 'bg-mint')}>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-primary">{finished ? <CheckCircle2 size={20} /> : order.status === 'ARRIVED' ? <PackageOpen size={20} /> : <Clock size={20} />}</span>
         <div>
           <div className="text-sm font-semibold text-ink">{head.title}</div>
           <div className="text-xs text-muted">{head.text}</div>
@@ -114,7 +128,7 @@ export function OrderDetailPage() {
   const q = useQuery({
     queryKey: qk.myOrder(id!),
     queryFn: () => api.me.order(id!),
-    refetchInterval: (query) => (query.state.data && ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'].includes(query.state.data.status) ? false : 30_000),
+    refetchInterval: (query) => (query.state.data && ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'].includes(query.state.data.status) ? false : query.state.data?.status === 'ARRIVED' ? 10_000 : 30_000),
   });
   const [cancelOpen, setCancelOpen] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
@@ -132,7 +146,7 @@ export function OrderDetailPage() {
     },
   });
 
-  if (q.isLoading) return <PageLoader />;
+  if (q.isLoading) return <OrdersSkeleton />;
   if (q.error || !q.data) return <ErrorState error={q.error} />;
   const o = q.data;
   const effSubtotal = o.items.reduce((s, i) => s + i.pricePaise * effectiveLineQty(i), 0);
@@ -144,7 +158,7 @@ export function OrderDetailPage() {
           <PartyPopper size={28} />
           <div>
             <div className="font-semibold">Order placed!</div>
-            <div className="text-sm text-white/85">We'll pick it fresh and deliver in your slot.</div>
+            <div className="text-sm text-white/85">We'll pick it fresh and deliver it today between 7 AM and 11 PM.</div>
           </div>
         </div>
       )}
@@ -154,15 +168,31 @@ export function OrderDetailPage() {
           <div>
             <h1 className="text-xl">Order #{o.orderNo}</h1>
             <p className="text-sm text-muted">
-              {o.slotDate && o.slot ? `${formatDateLabel(o.slotDate)}, ${o.slot.label} ${formatTime12(o.slot.startTime)}–${formatTime12(o.slot.endTime)}` : ''}
+              {o.slotDate && o.slot ? `${formatDateLabel(o.slotDate)}, ${formatTime12(o.slot.startTime)}–${formatTime12(o.slot.endTime)}` : ''}
             </p>
           </div>
           <StatusBadge status={o.status} />
         </div>
+        {o.status === 'ARRIVED' && (
+          <div role="alert" className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-accent bg-accent/10 p-4">
+            <PackageOpen size={28} className="mt-0.5 shrink-0 text-[#c25a14]" />
+            <div className="text-sm">
+              <div className="text-base font-semibold text-ink">Your delivery partner is at your door</div>
+              <p className="mt-0.5 text-body">
+                Open the box and check everything. Accept what is fresh, hand back what is not, or reject the whole order{o.canCancel ? ' with the Cancel button below' : ''}.
+              </p>
+            </div>
+          </div>
+        )}
+        {o.eta && ['ASSIGNED', 'OUT_FOR_DELIVERY', 'PACKED', 'PACKING', 'CONFIRMED', 'PLACED'].includes(o.status) && (
+          <p className="mt-4 flex items-center gap-2 text-sm text-muted">
+            <Clock size={16} className="text-primary" /> Once out for delivery, it reaches you in about <b className="text-ink">{formatEta(o.eta)}</b> ({o.eta.distanceKm} km away).
+          </p>
+        )}
         <div className="mt-6">
           <Timeline order={o} />
         </div>
-        {o.riderName && ['ASSIGNED', 'OUT_FOR_DELIVERY'].includes(o.status) && (
+        {o.riderName && ['ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'].includes(o.status) && (
           <p className="mt-4 flex items-center gap-2 rounded-xl bg-mint px-3 py-2 text-sm">
             <img src="/icons/truck.webp" alt="" className="h-8 w-8 object-contain" /> {o.riderName} will deliver your order.
           </p>
@@ -217,12 +247,19 @@ export function OrderDetailPage() {
         </div>
         <div className="mt-3 space-y-1.5 border-t border-line pt-3 text-sm">
           <Line label="Item total" value={formatINR(effSubtotal)} />
-          {o.discountPaise > 0 && <Line label={`Coupon ${o.couponCode ?? ''}`} value={`– ${formatINR(Math.min(o.discountPaise, effSubtotal))}`} />}
+          {o.discountPaise - o.coinDiscountPaise > 0 && <Line label={`Coupon ${o.couponCode ?? ''}`} value={`– ${formatINR(Math.min(o.discountPaise - o.coinDiscountPaise, effSubtotal))}`} />}
+          {o.coinDiscountPaise > 0 && <Line label={`Sabjii Coins (${o.coinsUsed})`} value={`– ${formatINR(o.coinDiscountPaise)}`} />}
           <Line label="Delivery fee" value={o.deliveryFeePaise && effSubtotal ? formatINR(o.deliveryFeePaise) : 'FREE'} />
+          {o.codFeePaise > 0 && effSubtotal > 0 && <Line label="Cash on delivery fee" value={`+ ${formatINR(o.codFeePaise)}`} />}
           <div className="flex justify-between pt-1 text-base font-semibold text-ink">
             <span>{o.paymentMode === 'COD' ? (o.codCollectedPaise != null ? 'Paid in cash' : 'To pay on delivery') : 'Paid online'}</span>
             <span>{formatINR(o.codCollectedPaise ?? o.finalPayablePaise)}</span>
           </div>
+          {o.coinsEarned > 0 && (
+            <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <Coins size={14} /> You earned <b>{o.coinsEarned} Sabjii Coins</b> on this order.
+            </p>
+          )}
         </div>
       </Card>
 
@@ -334,14 +371,14 @@ function CancelModal({ open, onClose, order, onDone }: { open: boolean; onClose:
     <Modal
       open={open}
       onClose={onClose}
-      title="Cancel this order?"
+      title={['OUT_FOR_DELIVERY', 'ARRIVED'].includes(order.status) ? 'Reject this order?' : 'Cancel this order?'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Keep order
           </Button>
           <Button variant="danger" loading={m.isPending} onClick={() => m.mutate()}>
-            Cancel order
+            {['OUT_FOR_DELIVERY', 'ARRIVED'].includes(order.status) ? 'Reject order' : 'Cancel order'}
           </Button>
         </>
       }
@@ -353,7 +390,12 @@ function CancelModal({ open, onClose, order, onDone }: { open: boolean; onClose:
           ))}
         </Select>
       </Field>
+      <p className="mt-3 rounded-xl bg-mint px-3 py-2 text-sm text-primary">
+        <b>Open-box delivery:</b> you can cancel for free any time until the delivery partner hands the order over.
+        {['OUT_FOR_DELIVERY', 'ARRIVED'].includes(order.status) && ' Our partner will take the order back.'}
+      </p>
       {order.paymentStatus === 'PAID' && <p className="mt-3 text-sm text-muted">The full amount goes back to your original payment method.</p>}
+      {order.coinsUsed > 0 && <p className="mt-2 text-sm text-muted">The {order.coinsUsed} Sabjii Coins you used come back to your balance.</p>}
     </Modal>
   );
 }

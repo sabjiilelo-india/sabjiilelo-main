@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
@@ -8,7 +9,7 @@ import { api } from '../../lib/api';
 import { useShop } from '../../lib/shop';
 import { EmptyState, ErrorState, PageLoader } from '../../components/ui';
 import { ProduceImage } from '../../components/ProduceImage';
-import { AddToCart, ProductGrid, ProductGridSkeleton, discountPct } from './components';
+import { AddToCart, NutritionCard, ProductGrid, ProductGridSkeleton, discountPct } from './components';
 
 export function CategoryPage() {
   const { id } = useParams();
@@ -70,16 +71,18 @@ export function ItemPage() {
   const { id } = useParams();
   const nav = useNavigate();
   const q = useQuery({ queryKey: qk.catalogItem(id!), queryFn: () => api.catalog.item(id!) });
-  if (q.isLoading) return <PageLoader />;
+  const [pick, setPick] = useState(0);
+  if (q.isLoading) return <ItemSkeleton />;
   if (q.error || !q.data) return <ErrorState error={q.error} />;
   const { item, date } = q.data;
+  const sticky = item.variants[pick] ?? item.variants[0];
   return (
-    <div>
+    <div className="pb-20 md:pb-0">
       <button onClick={() => nav(-1)} className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-primary">
         <ArrowLeft size={16} /> Back
       </button>
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="card overflow-hidden">
+        <div className="card overflow-hidden md:sticky md:top-24 md:self-start">
           <ProduceImage src={item.images[0]} name={item.name} className="aspect-square w-full" emojiClass="text-[120px]" />
         </div>
         <div>
@@ -88,10 +91,10 @@ export function ItemPage() {
           <p className="mt-4 text-body/90">{item.description}</p>
           <p className="mt-2 text-xs text-muted">Availability for delivery {formatDateLabel(date).toLowerCase()}</p>
           <div className="mt-6 space-y-3">
-            {item.variants.map((v) => {
+            {item.variants.map((v, vi) => {
               const off = discountPct(v);
               return (
-                <div key={v.id} className="card flex items-center justify-between p-4">
+                <div key={v.id} onClick={() => setPick(vi)} className={`card flex items-center justify-between p-4 transition ${vi === pick ? 'border-primary/50 ring-1 ring-primary/30' : ''}`}>
                   <div>
                     <div className="font-semibold text-ink">{v.label}</div>
                     <div className="flex items-baseline gap-2">
@@ -109,14 +112,40 @@ export function ItemPage() {
               );
             })}
           </div>
+          {item.nutrition && <NutritionCard nutrition={item.nutrition} />}
           <div className="mt-6 flex items-start gap-3 rounded-2xl bg-mint p-4 text-sm">
             <ShieldCheck className="shrink-0 text-primary" />
             <span>
-              <b className="text-ink">Freshness promise.</b> Check it at your door — if it isn't fresh, hand it back to our delivery partner and it's off your bill.
+              <b className="text-ink">Freshness promise.</b> Open the box at your door — if it isn't fresh, hand it back to our delivery partner and it's off your bill. You can even cancel the whole order until it's handed over.
             </span>
           </div>
         </div>
       </div>
+      {sticky && (
+        <div className="fixed inset-x-0 bottom-[60px] z-20 flex items-center justify-between gap-3 border-t border-line bg-white/95 px-4 py-2.5 shadow-lift backdrop-blur md:hidden">
+          <div className="min-w-0">
+            <div className="truncate text-xs text-muted">{item.name} · {sticky.label}</div>
+            <div className="text-lg font-bold text-primary">{formatINR(sticky.pricePaise)}</div>
+          </div>
+          <AddToCart variant={sticky} item={item} />
+        </div>
+      )}
     </div>
   );
 }
+
+function ItemSkeleton() {
+  return (
+    <div className="grid gap-8 md:grid-cols-2" aria-busy="true">
+      <div className="skeleton aspect-square" />
+      <div className="space-y-4">
+        <div className="skeleton h-9 w-2/3" />
+        <div className="skeleton h-5 w-1/3" />
+        <div className="skeleton h-20" />
+        <div className="skeleton h-16" />
+        <div className="skeleton h-16" />
+      </div>
+    </div>
+  );
+}
+

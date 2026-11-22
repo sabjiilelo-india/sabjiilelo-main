@@ -10,6 +10,7 @@ import { useCart, useShop } from '../lib/shop';
 import { api } from '../lib/api';
 import { LocationModal } from '../components/LocationModal';
 import { Brand } from '../components/Brand';
+import { CoinChip } from '../components/CoinChip';
 
 export function ShopLayout() {
   const { user, status } = useAuth();
@@ -61,6 +62,7 @@ export function ShopLayout() {
             <input className="input h-11 rounded-2xl border-transparent bg-white pl-11 shadow-sm" placeholder='Search "tomato", "apple", "palak"…' value={q} onChange={(e) => setQ(e.target.value)} />
           </form>
           <div className="ml-auto flex items-center gap-1 md:ml-0">
+            {isCustomer && <CoinChip />}
             {isCustomer && (
               <Link to="/notifications" className="relative rounded-xl p-2.5 text-ink transition hover:bg-white/70" aria-label="Notifications">
                 <Bell size={20} />
@@ -110,7 +112,7 @@ export function ShopLayout() {
         <div className="mx-auto grid max-w-7xl grid-cols-4 gap-8 px-4 py-10 text-sm">
           <div className="col-span-1">
             <Brand />
-            <p className="mt-3 text-muted">Vegetables & fruits bought fresh from the mandi every morning and delivered in your slot.</p>
+            <p className="mt-3 text-muted">Vegetables & fruits bought fresh from the mandi every morning and delivered 7 AM – 11 PM, open-box.</p>
           </div>
           <div>
             <h4 className="mb-3 text-sm">Shop</h4>
@@ -138,7 +140,7 @@ export function ShopLayout() {
           </div>
         </div>
         <div className="border-t border-line py-4 text-center text-xs text-muted">
-          © {new Date().getFullYear()} Sabjii Le Lo · <span className="font-script text-base text-primary">Sabjii le lo, taaza le lo!</span>
+          © {new Date().getFullYear()} Sabjii Le Lo · <span className="font-script text-base text-primary">Taazi taazi sabji le lo</span>
         </div>
       </footer>
 

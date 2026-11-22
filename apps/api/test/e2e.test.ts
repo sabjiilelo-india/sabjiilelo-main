@@ -188,6 +188,11 @@ describe('Sabjii Le Lo end to end', () => {
     const quote = await request(app).post('/api/me/checkout/quote').set(as('customer')).send({ addressId: ctx.addressId, couponCode: 'TEST10' }).expect(200);
     expect(quote.body.subtotalPaise).toBe(3800 * 2 + 4500);
     expect(quote.body.discountPaise).toBe(1000);
+    expect(quote.body.codFeePaise).toBe(0);
+    // Cash on delivery adds a flat Rs 5
+    const codQuote = await request(app).post('/api/me/checkout/quote').set(as('customer')).send({ addressId: ctx.addressId, couponCode: 'TEST10', paymentMode: 'COD' }).expect(200);
+    expect(codQuote.body.codFeePaise).toBe(500);
+    expect(codQuote.body.totalPaise).toBe(quote.body.totalPaise + 500);
 
     const cod = await request(app)
       .post('/api/me/orders')
@@ -195,6 +200,7 @@ describe('Sabjii Le Lo end to end', () => {
       .send({ addressId: ctx.addressId, slotId: ctx.slotId, slotDate: ctx.slotDate, couponCode: 'TEST10', paymentMode: 'COD', channel: 'APP' })
       .expect(201);
     expect(cod.body.order.status).toBe('PLACED');
+    expect(cod.body.order.codFeePaise).toBe(500);
     ctx.codOrder = cod.body.order.id;
 
     // Prepaid order: 3 x 500 g tomato
@@ -242,7 +248,7 @@ describe('Sabjii Le Lo end to end', () => {
       .send({ items: [{ orderItemId: tomatoLine.id, packedQty: 1 }] })
       .expect(200);
     expect(packed.body.status).toBe('PACKED');
-    expect(packed.body.finalPayablePaise).toBe(3800 + 4500 - 1000 + packed.body.deliveryFeePaise);
+    expect(packed.body.finalPayablePaise).toBe(3800 + 4500 - 1000 + packed.body.deliveryFeePaise + 500);
     expect(packed.body.invoiceNo).toMatch(new RegExp(`^${code}/`));
 
     await request(app).post(`/api/ops/orders/${ctx.preOrder}/pack`).set(as('manager')).send({ items: [] }).expect(200);
@@ -378,6 +384,50 @@ describe('Sabjii Le Lo end to end', () => {
       .expect(201);
     expect(pos.body.status).toBe('DELIVERED');
     expect(pos.body.totalPaise).toBe(4000);
+  });
+
+  it('earns Sabjii Coins on delivery, spends them at checkout, and gives them back on a door cancel', async () => {
+    // The two delivered orders earned coins (2% of what was paid).
+    const wallet = await request(app).get('/api/me/coins').set(as('customer')).expect(200);
+    expect(wallet.body.balance).toBeGreaterThan(0);
+    expect(wallet.body.history.some((h: { type: string }) => h.type === 'EARN')).toBe(true);
+    const balance: number = wallet.body.balance;
+
+    await request(app).put('/api/me/cart').set(as('customer')).send({ variantId: ctx.coconutV, qty: 2 }).expect(200);
+    const q = await request(app).post('/api/me/checkout/quote').set(as('customer')).send({ addressId: ctx.addressId, paymentMode: 'COD', useCoins: true }).expect(200);
+    expect(q.body.coinBalance).toBe(balance);
+    expect(q.body.coinsUsed).toBe(balance);
+    expect(q.body.coinDiscountPaise).toBe(balance * 100);
+
+    const o = await request(app)
+      .post('/api/me/orders')
+      .set(as('customer'))
+      .send({ addressId: ctx.addressId, slotId: ctx.slotId, slotDate: ctx.slotDate, paymentMode: 'COD', useCoins: true })
+      .expect(201);
+    expect(o.body.order.coinsUsed).toBe(balance);
+    expect(o.body.order.totalPaise).toBe(q.body.totalPaise);
+    const spent = await request(app).get('/api/me/coins').set(as('customer')).expect(200);
+    expect(spent.body.balance).toBe(0);
+
+    // Pack, dispatch, rider starts and arrives at the door
+    const id = o.body.order.id;
+    await request(app).post(`/api/ops/orders/${id}/pack`).set(as('manager')).send({ items: [] }).expect(200);
+    await request(app).post('/api/ops/dispatch').set(as('manager')).send({ orderIds: [id], riderId: ctx.riderId }).expect(200);
+    await request(app).post(`/api/rider/orders/${id}/start`).set(as('rider')).expect(200);
+    const arrived = await request(app).post(`/api/rider/orders/${id}/arrived`).set(as('rider')).expect(200);
+    expect(arrived.body.status).toBe('ARRIVED');
+
+    // Open-box delivery: the customer can still reject the whole order at the door
+    const seen = await request(app).get(`/api/me/orders/${id}`).set(as('customer')).expect(200);
+    expect(seen.body.canCancel).toBe(true);
+    const cancelled = await request(app).post(`/api/me/orders/${id}/cancel`).set(as('customer')).send({ reason: 'Not fresh' }).expect(200);
+    expect(cancelled.body.status).toBe('CANCELLED');
+    const back = await request(app).get('/api/me/coins').set(as('customer')).expect(200);
+    expect(back.body.balance).toBe(balance);
+    expect(back.body.history.some((h: { type: string }) => h.type === 'REFUND')).toBe(true);
+
+    // Once delivered, an order can no longer be cancelled
+    await request(app).post(`/api/me/orders/${ctx.codOrder}/cancel`).set(as('customer')).send({ reason: 'Too late' }).expect(400);
   });
 
   it('reports and dashboard add up', async () => {

@@ -14,7 +14,7 @@ export function DeliveryList({ orders }: { orders: OrderSummary[] }) {
           </Row>
           <T style={{ marginTop: 4, color: colors.ink }}>{o.customerName}</T>
           <T v="small">
-            📍 {o.pincode} · {o.slotDate ? `${formatDateLabel(o.slotDate)} ${o.slotLabel ?? ''}` : ''} · {o.itemCount} items
+            📍 {o.pincode} · {o.slotDate ? formatDateLabel(o.slotDate) : ''} · {o.itemCount} items
           </T>
           <View style={{ marginTop: 8 }}>
             {o.paymentMode === 'COD' ? <Badge label={`Collect ${formatINR(o.finalPayablePaise)}`} tone="orange" /> : <Badge label="Prepaid" tone="green" />}

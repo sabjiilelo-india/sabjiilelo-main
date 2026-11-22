@@ -3,11 +3,17 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatINR } from '@sabjiilelo/shared';
 import { useCart } from '../../lib/shop';
-import { Button, Card, Empty, Loader, ProduceImage, Row, Screen, Stepper, T, colors, font } from '../../components/ui';
+import { Button, Card, Empty, ProduceImage, Row, Screen, SkeletonList, Stepper, T, colors, font } from '../../components/ui';
 
 export default function CartTab() {
   const { cart, isLoading, setQty, refetch } = useCart();
-  if (isLoading) return <Loader />;
+  if (isLoading) {
+    return (
+      <Screen edges={[]}>
+        <SkeletonList count={4} height={80} />
+      </Screen>
+    );
+  }
   if (!cart.lines.length) {
     return (
       <Screen edges={[]}>

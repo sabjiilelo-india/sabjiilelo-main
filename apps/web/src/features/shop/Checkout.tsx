@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CheckCircle2, CreditCard, MapPin, Plus, Tag } from 'lucide-react';
+import { Banknote, CheckCircle2, Clock, Coins, CreditCard, MapPin, PackageOpen, Plus, Tag } from 'lucide-react';
 import clsx from 'clsx';
 import { qk } from '@sabjiilelo/api-client';
-import { formatDateLabel, formatINR, formatTime12, type SlotOption } from '@sabjiilelo/shared';
+import { COD_FEE_PAISE, formatDateLabel, formatEta, formatINR, formatTime12, type SlotOption } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { useShop } from '../../lib/shop';
 import { Badge, Button, Card, EmptyState, ErrorState, Input, Modal, PageLoader, Spinner } from '../../components/ui';
@@ -56,6 +56,7 @@ export function CheckoutPage() {
   const [coupon, setCoupon] = useState<string | null>(null);
   const [slot, setSlot] = useState<SlotOption | null>(null);
   const [mode, setMode] = useState<'RAZORPAY' | 'COD'>('COD');
+  const [useCoins, setUseCoins] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [placing, setPlacing] = useState(false);
   const mockPay = useMockPayConfirm();
@@ -69,8 +70,9 @@ export function CheckoutPage() {
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',
-    queryKey: qk.quote(addressId ?? '', coupon),
-    queryFn: () => api.me.quote(addressId!, coupon),
+    placeholderData: (prev) => prev,
+    queryKey: qk.quote(addressId ?? '', coupon, mode, useCoins),
+    queryFn: () => api.me.quote(addressId!, coupon, { paymentMode: mode, useCoins }),
     enabled: !!addressId,
   });
   useEffect(() => {
@@ -101,6 +103,7 @@ export function CheckoutPage() {
         slotDate: slot.date,
         couponCode: coupon,
         paymentMode: mode,
+        useCoins,
         channel: 'WEB',
       });
       qc.invalidateQueries({ queryKey: ['me'] });
@@ -165,11 +168,14 @@ export function CheckoutPage() {
 
         {/* Slot */}
         <Card className="p-5">
-          <h2 className="mb-3 text-base">Delivery slot</h2>
+          <h2 className="mb-1 flex items-center gap-2 text-base">
+            <Clock size={18} className="text-accent" /> Delivery time
+          </h2>
+          <p className="mb-3 text-xs text-muted">We deliver every day, 7 AM – 11 PM.</p>
           {quote.isLoading ? (
             <div className="skeleton h-20" />
           ) : slotsByDate.length === 0 ? (
-            <p className="text-sm text-muted">No slots available right now.</p>
+            <p className="text-sm text-muted">Ordering for today has closed. Please check back tomorrow from 7 AM.</p>
           ) : (
             <div className="space-y-3">
               {slotsByDate.map(([date, list]) => (
@@ -188,9 +194,8 @@ export function CheckoutPage() {
                             selected ? 'border-primary bg-light-green/60 text-primary' : 'border-line hover:border-primary/40',
                           )}
                         >
-                          <div className="font-semibold">{s.label}</div>
-                          <div className="text-xs">
-                            {formatTime12(s.startTime)} – {formatTime12(s.endTime)}
+                          <div className="font-semibold">
+                            {formatDateLabel(s.date)}, {formatTime12(s.startTime)} – {formatTime12(s.endTime)}
                           </div>
                           {!s.available && <div className="text-[11px]">{s.remaining === 0 ? 'Full' : 'Closed'}</div>}
                         </button>
@@ -209,7 +214,7 @@ export function CheckoutPage() {
           <div className="grid gap-2 sm:grid-cols-2">
             {[
               { v: 'RAZORPAY' as const, title: 'Pay online', text: 'UPI, cards, netbanking', icon: <CreditCard size={20} /> },
-              { v: 'COD' as const, title: 'Cash on delivery', text: 'Pay after checking at your door', icon: <Banknote size={20} /> },
+              { v: 'COD' as const, title: 'Cash on delivery', text: `Pay after checking at your door · ${formatINR(COD_FEE_PAISE)} extra`, icon: <Banknote size={20} /> },
             ].map((o) => (
               <button
                 key={o.v}
@@ -225,6 +230,12 @@ export function CheckoutPage() {
               </button>
             ))}
           </div>
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-mint px-3 py-2 text-xs text-primary">
+            <PackageOpen size={16} className="mt-0.5 shrink-0" />
+            <span>
+              <b>Open-box delivery.</b> Check everything at your door. You can cancel any time until the delivery partner reaches you.
+            </span>
+          </p>
         </Card>
       </div>
 
@@ -265,6 +276,23 @@ export function CheckoutPage() {
           )}
         </Card>
 
+        {!!q && q.coinBalance > 0 && (
+          <Card className="p-5">
+            <label className="flex cursor-pointer items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                <Coins size={20} />
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm font-semibold text-ink">Use Sabjii Coins</span>
+                <span className="text-xs text-muted">
+                  You have {q.coinBalance} coins{q.maxCoinsUsable > 0 ? ` · use up to ${q.maxCoinsUsable} on this order` : ' · add more items to use them'}
+                </span>
+              </span>
+              <input type="checkbox" className="h-5 w-5 accent-[#0e5a32]" checked={useCoins} disabled={q.maxCoinsUsable <= 0} onChange={(e) => setUseCoins(e.target.checked)} />
+            </label>
+          </Card>
+        )}
+
         <Card className="sticky top-24 p-5">
           <h2 className="mb-3 text-base">Bill details</h2>
           {quote.error ? (
@@ -278,7 +306,9 @@ export function CheckoutPage() {
               <div className="space-y-2 text-sm">
                 <Row label={`Items (${q.lines.reduce((s, l) => s + l.qty, 0)})`} value={formatINR(q.subtotalPaise)} />
                 {q.discountPaise > 0 && <Row label="Coupon discount" value={`– ${formatINR(q.discountPaise)}`} green />}
+                {q.coinsUsed > 0 && <Row label={`Sabjii Coins (${q.coinsUsed})`} value={`– ${formatINR(q.coinDiscountPaise)}`} green />}
                 <Row label="Delivery fee" value={q.deliveryFeePaise ? formatINR(q.deliveryFeePaise) : 'FREE'} green={!q.deliveryFeePaise} />
+                {q.codFeePaise > 0 && <Row label="Cash on delivery fee" value={`+ ${formatINR(q.codFeePaise)}`} />}
                 {q.amountToFreeDeliveryPaise > 0 && q.deliveryFeePaise > 0 && (
                   <p className="rounded-lg bg-mint px-2 py-1 text-xs text-primary">Add {formatINR(q.amountToFreeDeliveryPaise)} more for free delivery</p>
                 )}
@@ -300,7 +330,12 @@ export function CheckoutPage() {
               </Button>
               {slot && (
                 <p className="mt-2 text-center text-xs text-muted">
-                  Arrives {formatDateLabel(slot.date).toLowerCase()}, {formatTime12(slot.startTime)}–{formatTime12(slot.endTime)}
+                  Delivery {formatDateLabel(slot.date).toLowerCase()}, {formatTime12(slot.startTime)}–{formatTime12(slot.endTime)}
+                </p>
+              )}
+              {q.eta && (
+                <p className="mt-1 flex items-center justify-center gap-1 text-center text-xs font-medium text-primary">
+                  <Clock size={12} /> Arrives in about {formatEta(q.eta)} once out for delivery
                 </p>
               )}
             </>

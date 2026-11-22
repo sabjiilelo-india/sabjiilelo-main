@@ -26,6 +26,9 @@ export interface InvoiceData {
   subtotalPaise: number;
   discountPaise: number;
   deliveryFeePaise: number;
+  codFeePaise: number;
+  /** Part of discountPaise that was paid with Sabjii Coins. */
+  coinDiscountPaise: number;
   finalPayablePaise: number;
   refundedPaise: number;
 }
@@ -103,9 +106,11 @@ export function renderInvoice(data: InvoiceData, out: Writable) {
     const effSubtotal = data.items.reduce((s, it) => s + it.pricePaise * effectiveLineQty(it), 0);
     const rows: [string, string][] = [
       ['Item total', rs(effSubtotal)],
-      ['Discount', `- ${rs(Math.min(data.discountPaise, effSubtotal))}`],
-      ['Delivery fee', rs(effSubtotal > 0 ? data.deliveryFeePaise : 0)],
+      ['Discount', `- ${rs(Math.min(data.discountPaise - data.coinDiscountPaise, effSubtotal))}`],
     ];
+    if (data.coinDiscountPaise > 0) rows.push(['Sabjii Coins used', `- ${rs(data.coinDiscountPaise)}`]);
+    rows.push(['Delivery fee', rs(effSubtotal > 0 ? data.deliveryFeePaise : 0)]);
+    if (data.codFeePaise > 0) rows.push(['Cash on delivery fee', rs(effSubtotal > 0 ? data.codFeePaise : 0)]);
     if (data.refundedPaise > 0) rows.push(['Refunded', rs(data.refundedPaise)]);
     for (const [k, v] of rows) {
       doc.font('Helvetica').text(k, 330, y).text(v, 490, y);

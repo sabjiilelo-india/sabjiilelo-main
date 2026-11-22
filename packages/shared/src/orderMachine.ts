@@ -21,21 +21,28 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly Transition[]> = {
   ],
   PACKING: [
     { to: 'PACKED', roles: OPS },
-    { to: 'CANCELLED', roles: OPS },
+    { to: 'CANCELLED', roles: ['CUSTOMER', ...OPS] },
   ],
   PACKED: [
     { to: 'ASSIGNED', roles: OPS },
-    { to: 'CANCELLED', roles: OPS },
+    { to: 'CANCELLED', roles: ['CUSTOMER', ...OPS] },
   ],
   ASSIGNED: [
     { to: 'OUT_FOR_DELIVERY', roles: ['DELIVERY'] },
     { to: 'PACKED', roles: OPS },
-    { to: 'CANCELLED', roles: OPS },
+    { to: 'CANCELLED', roles: ['CUSTOMER', ...OPS] },
   ],
   OUT_FOR_DELIVERY: [
+    { to: 'ARRIVED', roles: ['DELIVERY'] },
     { to: 'DELIVERED', roles: ['DELIVERY'] },
     { to: 'PARTIALLY_DELIVERED', roles: ['DELIVERY'] },
-    { to: 'CANCELLED', roles: ['DELIVERY', ...OPS] },
+    { to: 'CANCELLED', roles: ['CUSTOMER', 'DELIVERY', ...OPS] },
+  ],
+  // Open-box delivery: the customer can still reject the whole order while the rider is at the door.
+  ARRIVED: [
+    { to: 'DELIVERED', roles: ['DELIVERY'] },
+    { to: 'PARTIALLY_DELIVERED', roles: ['DELIVERY'] },
+    { to: 'CANCELLED', roles: ['CUSTOMER', 'DELIVERY', ...OPS] },
   ],
   DELIVERED: [],
   PARTIALLY_DELIVERED: [],
@@ -59,6 +66,7 @@ export const ACTIVE_ORDER_STATUSES: readonly OrderStatus[] = [
   'PACKED',
   'ASSIGNED',
   'OUT_FOR_DELIVERY',
+  'ARRIVED',
 ];
 
 /** Orders that hold stock and slot capacity. */
@@ -77,6 +85,8 @@ export function trackingStepIndex(status: OrderStatus): number {
       return 1;
     case 'ASSIGNED':
       return 2;
+    case 'ARRIVED':
+      return 3;
     case 'PARTIALLY_DELIVERED':
       return 4;
     default:
@@ -92,7 +102,8 @@ export const TRACKING_HEADLINE: Record<OrderStatus, { title: string; text: strin
   PACKING: { title: 'Packing your order', text: 'Picking the freshest produce for you.' },
   PACKED: { title: 'Packed & ready', text: 'A delivery partner will be assigned shortly.' },
   ASSIGNED: { title: 'Delivery partner assigned', text: 'They will leave for your address soon.' },
-  OUT_FOR_DELIVERY: { title: 'On the way to you', text: 'Please keep your phone handy.' },
+  OUT_FOR_DELIVERY: { title: 'On the way to you', text: 'Please keep your phone handy. You can still cancel before it reaches you.' },
+  ARRIVED: { title: 'Delivery partner is at your door', text: 'Open the box and check everything. Accept what is fresh, reject the rest, or cancel the order.' },
   DELIVERED: { title: 'Delivered', text: 'Enjoy your fresh produce!' },
   PARTIALLY_DELIVERED: { title: 'Delivered', text: 'Items you returned were taken off your bill.' },
   CANCELLED: { title: 'Order cancelled', text: 'Any payment made will be refunded.' },

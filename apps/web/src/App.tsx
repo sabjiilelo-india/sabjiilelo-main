@@ -146,6 +146,7 @@ export function App() {
           <Route path="account" element={CUSTOMER_ONLY(<Shop page="account" />)} />
           <Route path="account/profile" element={CUSTOMER_ONLY(<Shop page="profile" />)} />
           <Route path="account/addresses" element={CUSTOMER_ONLY(<Shop page="addresses" />)} />
+          <Route path="account/coins" element={CUSTOMER_ONLY(<Shop page="coins" />)} />
           <Route path="account/settings" element={CUSTOMER_ONLY(<Shop page="settings" />)} />
           <Route path="help" element={<Shop page="help" />} />
           <Route path="terms" element={<Shop page="terms" />} />

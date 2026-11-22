@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { qk } from '@sabjiilelo/api-client';
-import { UNIT_LABEL, formatINR, formatQty, type Category, type UnitType, type VariantInput } from '@sabjiilelo/shared';
+import { UNIT_LABEL, formatINR, formatQty, nutritionFor, type Category, type Nutrition, type UnitType, type VariantInput } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, MoneyInput, PageHeader, PageLoader, Select, Table, Textarea, Toggle } from '../../components/ui';
 import { ImageUpload } from '../../components/ImageUpload';
@@ -115,6 +115,13 @@ export function ItemEditor() {
     images: [] as string[],
   });
   const [variants, setVariants] = useState<VariantRow[]>([{ key: 'v0', label: '500 g', baseQty: 500, pricePaise: 2000, mrpPaise: 2500, isActive: true }]);
+  const [nut, setNut] = useState<NutritionDraft>(emptyNutrition());
+  // Only send nutrition when the admin touched it, so saving other fields never clears it.
+  const [nutDirty, setNutDirty] = useState(false);
+  const editNut = (d: NutritionDraft) => {
+    setNut(d);
+    setNutDirty(true);
+  };
 
   useEffect(() => {
     if (!isNew && existing.data) {
@@ -130,6 +137,8 @@ export function ItemEditor() {
         images: i.images,
       });
       setVariants(i.variants.filter((v) => v.isActive).map((v) => ({ ...v, key: v.id })));
+      setNut(draftFrom(i.nutrition));
+      setNutDirty(false);
     }
   }, [existing.data, isNew]);
   useEffect(() => {
@@ -144,6 +153,7 @@ export function ItemEditor() {
         hsnCode: f.hsnCode || null,
         sourceNote: f.sourceNote || null,
         variants: variants.map(({ key: _k, ...v }) => v),
+        ...(nutDirty ? { nutrition: nut.enabled ? draftToNutrition(nut) : null } : {}),
       };
       return isNew ? api.manage.createItem(body) : api.manage.updateItem(id!, body);
     },
@@ -196,6 +206,8 @@ export function ItemEditor() {
               <Input value={f.hsnCode} onChange={(e) => setF({ ...f, hsnCode: e.target.value })} />
             </Field>
           </Card>
+
+          <NutritionEditor value={nut} onChange={editNut} suggestion={f.name ? nutritionFor(f.name) : null} />
 
           <Card className="p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -338,3 +350,119 @@ function CategoryForm({ category, onClose, onSaved }: { category: Category | nul
     </Modal>
   );
 }
+
+type NutritionDraft = {
+  enabled: boolean;
+  per: string;
+  calories: string;
+  protein: string;
+  carbs: string;
+  fibre: string;
+  fat: string;
+  tag: string;
+  benefits: string;
+  highlights: { key: string; name: string; amount: string; dv: string }[];
+};
+
+function emptyNutrition(): NutritionDraft {
+  return { enabled: false, per: '100 g', calories: '', protein: '', carbs: '', fibre: '', fat: '', tag: '', benefits: '', highlights: [] };
+}
+
+function draftFrom(n: Nutrition | null): NutritionDraft {
+  if (!n) return emptyNutrition();
+  return {
+    enabled: true,
+    per: n.per,
+    calories: String(n.calories),
+    protein: String(n.protein),
+    carbs: String(n.carbs),
+    fibre: String(n.fibre),
+    fat: String(n.fat),
+    tag: n.tag ?? '',
+    benefits: n.benefits.join('\n'),
+    highlights: n.highlights.map((h, i) => ({ key: `h${i}`, name: h.name, amount: h.amount, dv: h.dv != null ? String(h.dv) : '' })),
+  };
+}
+
+function draftToNutrition(d: NutritionDraft): Nutrition {
+  const num = (s: string) => Math.max(0, Number(s) || 0);
+  return {
+    per: d.per.trim() || '100 g',
+    calories: num(d.calories),
+    protein: num(d.protein),
+    carbs: num(d.carbs),
+    fibre: num(d.fibre),
+    fat: num(d.fat),
+    highlights: d.highlights
+      .filter((h) => h.name.trim())
+      .map((h) => ({ name: h.name.trim(), amount: h.amount.trim(), ...(h.dv.trim() ? { dv: num(h.dv) } : {}) })),
+    benefits: d.benefits.split('\n').map((b) => b.trim()).filter(Boolean),
+    ...(d.tag.trim() ? { tag: d.tag.trim() } : {}),
+  };
+}
+
+function NutritionEditor({ value: d, onChange, suggestion }: { value: NutritionDraft; onChange: (d: NutritionDraft) => void; suggestion: Nutrition | null }) {
+  const set = (patch: Partial<NutritionDraft>) => onChange({ ...d, ...patch });
+  const macro = (k: 'calories' | 'protein' | 'carbs' | 'fibre' | 'fat', label: string) => (
+    <Field label={label}>
+      <Input type="number" min={0} step="0.1" value={d[k]} onChange={(e) => set({ [k]: e.target.value })} />
+    </Field>
+  );
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base">Nutrition &amp; benefits</h2>
+          <p className="text-xs text-muted">Shown on the item page. Typical values per 100 g.</p>
+        </div>
+        <Toggle checked={d.enabled} onChange={(v) => set({ enabled: v })} label={d.enabled ? 'Shown' : 'Hidden'} />
+      </div>
+      {d.enabled && (
+        <div className="mt-4 space-y-4">
+          {suggestion && !d.calories && (
+            <Button size="sm" variant="secondary" onClick={() => onChange(draftFrom(suggestion))}>
+              Fill from our nutrition table
+            </Button>
+          )}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+            <Field label="Per">
+              <Input value={d.per} onChange={(e) => set({ per: e.target.value })} />
+            </Field>
+            {macro('calories', 'Calories')}
+            {macro('protein', 'Protein (g)')}
+            {macro('carbs', 'Carbs (g)')}
+            {macro('fibre', 'Fibre (g)')}
+            {macro('fat', 'Fat (g)')}
+          </div>
+          <Field label="Card badge" hint="Short, e.g. 'Rich in Vitamin C'">
+            <Input maxLength={40} value={d.tag} onChange={(e) => set({ tag: e.target.value })} />
+          </Field>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-ink">Vitamins &amp; minerals</span>
+              <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => set({ highlights: [...d.highlights, { key: `h${Date.now()}`, name: '', amount: '', dv: '' }] })}>
+                Add
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {d.highlights.map((h) => (
+                <div key={h.key} className="grid grid-cols-[1fr_1fr_90px_auto] items-center gap-2">
+                  <Input placeholder="Vitamin C" value={h.name} onChange={(e) => set({ highlights: d.highlights.map((x) => (x.key === h.key ? { ...x, name: e.target.value } : x)) })} />
+                  <Input placeholder="14 mg" value={h.amount} onChange={(e) => set({ highlights: d.highlights.map((x) => (x.key === h.key ? { ...x, amount: e.target.value } : x)) })} />
+                  <Input type="number" min={0} placeholder="% DV" value={h.dv} onChange={(e) => set({ highlights: d.highlights.map((x) => (x.key === h.key ? { ...x, dv: e.target.value } : x)) })} />
+                  <Button variant="ghost" className="text-danger" aria-label="Remove" onClick={() => set({ highlights: d.highlights.filter((x) => x.key !== h.key) })}>
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Field label="Benefits" hint="One per line">
+            <Textarea rows={4} value={d.benefits} onChange={(e) => set({ benefits: e.target.value })} />
+          </Field>
+        </div>
+      )}
+    </Card>
+  );
+}
+

@@ -31,8 +31,9 @@ export function istInstant(ymd: string, hhmm: string): Date {
   return new Date(Date.UTC(y!, m! - 1, d!, hh!, mm!) - IST_OFFSET_MIN * 60_000);
 }
 
-export function slotCutoff(ymd: string, startTime: string, cutoffMinutesBefore: number): Date {
-  return new Date(istInstant(ymd, startTime).getTime() - cutoffMinutesBefore * 60_000);
+/** Last moment an order can be placed for a slot: `cutoffMinutesBefore` before the delivery window closes. */
+export function slotCutoff(ymd: string, endTime: string, cutoffMinutesBefore: number): Date {
+  return new Date(istInstant(ymd, endTime).getTime() - cutoffMinutesBefore * 60_000);
 }
 
 /** 0 = Sunday, matching JS getDay(). */

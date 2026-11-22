@@ -4,6 +4,8 @@ export * from './orderMachine';
 export * from './units';
 export * from './money';
 export * from './dates';
+export * from './delivery';
+export * from './nutrition';
 export * from './schemas';
 export * from './types';
 export * from './produce';

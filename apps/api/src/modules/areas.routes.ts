@@ -21,8 +21,8 @@ export const areasRouter = Router();
 areasRouter.use(authenticate);
 
 const DEFAULT_SLOTS = [
-  { label: 'Morning', startTime: '07:00', endTime: '10:00', cutoffMinutesBefore: 600, capacity: 150, sort: 0 },
-  { label: 'Evening', startTime: '17:00', endTime: '20:00', cutoffMinutesBefore: 240, capacity: 150, sort: 1 },
+  // One window, 7 AM to 11 PM. Orders stay open until an hour before it closes.
+  { label: 'Delivery', startTime: '07:00', endTime: '23:00', cutoffMinutesBefore: 60, capacity: 400, sort: 0 },
 ];
 
 // ---------------------------------------------------------------- super admin: areas

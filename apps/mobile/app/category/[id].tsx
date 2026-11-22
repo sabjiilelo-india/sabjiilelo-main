@@ -6,7 +6,7 @@ import { api } from '../../lib/api';
 import { useShop } from '../../lib/shop';
 import { CartBar } from '../../components/CartBar';
 import { ProductGrid } from '../../components/ProductCard';
-import { Empty, Loader, Screen } from '../../components/ui';
+import { Empty, Screen, SkeletonGrid } from '../../components/ui';
 
 export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,7 +19,7 @@ export default function CategoryScreen() {
     <View style={{ flex: 1 }}>
       <Stack.Screen options={{ title: name }} />
       <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()} style={{ paddingBottom: 100 }}>
-        {q.isLoading ? <Loader /> : q.data?.items.length ? <ProductGrid items={q.data.items} width={width} /> : <Empty title="Nothing here yet" />}
+        {q.isLoading ? <SkeletonGrid width={width} rows={2} /> : q.data?.items.length ? <ProductGrid items={q.data.items} width={width} /> : <Empty title="Nothing here yet" />}
       </Screen>
       <CartBar />
     </View>

@@ -127,7 +127,7 @@ authRouter.delete('/me', authenticate, async (req, res) => {
   const u = me(req);
   if (u.role !== 'CUSTOMER') throw forbidden('Staff accounts are removed by your area admin');
   const active = await prisma.order.count({
-    where: { customerId: u.sub, status: { in: ['PAYMENT_PENDING', 'PLACED', 'CONFIRMED', 'PACKING', 'PACKED', 'ASSIGNED', 'OUT_FOR_DELIVERY'] } },
+    where: { customerId: u.sub, status: { in: ['PAYMENT_PENDING', 'PLACED', 'CONFIRMED', 'PACKING', 'PACKED', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'] } },
   });
   if (active) throw new AppError(409, 'ACTIVE_ORDERS', 'You have orders in progress. Please wait until they are delivered or cancel them first.');
 

@@ -1,15 +1,18 @@
 import type { Prisma } from '@prisma/client';
 import {
   canTransition,
+  coinsEarned,
   computeTotals,
+  deliveryEta,
+  haversineKm,
   effectiveLineQty,
   finalPayable,
   formatINR,
-  slotCutoff,
   todayIST,
   ymdToDate,
   ORDER_STATUS_LABEL,
   type CartLine,
+  type DeliveryEta,
   type DeliverInput,
   type OrderDetail,
   type OrderStatus,
@@ -50,6 +53,7 @@ export const orderInclude = {
   rating: true,
   issues: { include: { orderItem: { select: { name: true } } }, orderBy: { createdAt: 'asc' } },
   slot: true,
+  area: { select: { lat: true, lng: true } },
   rider: { select: { id: true, name: true, phone: true } },
   payments: { orderBy: { createdAt: 'desc' } },
 } satisfies Prisma.OrderInclude;
@@ -87,10 +91,17 @@ export function toOrderSummary(o: OrderSummaryRow): OrderSummary {
 
 const ISSUE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
-function customerCanCancel(o: OrderFull, now = new Date()) {
-  if (!['PAYMENT_PENDING', 'PLACED', 'CONFIRMED'].includes(o.status)) return false;
-  if (!o.slot || !o.slotDate) return false;
-  return now < slotCutoff(ymd(o.slotDate)!, o.slot.startTime, o.slot.cutoffMinutesBefore);
+/** Open-box delivery: a customer can cancel at any point until the order is handed over. */
+const CUSTOMER_CANCEL_STATUSES = ['PAYMENT_PENDING', 'PLACED', 'CONFIRMED', 'PACKING', 'PACKED', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'];
+
+function customerCanCancel(o: { status: string }) {
+  return CUSTOMER_CANCEL_STATUSES.includes(o.status);
+}
+
+/** Estimated hand-over time from the store to the delivery address, when both have a location. */
+function etaFor(area: { lat: number | null; lng: number | null } | null | undefined, to: { lat?: number | null; lng?: number | null } | null | undefined): DeliveryEta | null {
+  if (area?.lat == null || area.lng == null || to?.lat == null || to.lng == null) return null;
+  return deliveryEta(haversineKm({ lat: area.lat, lng: area.lng }, { lat: to.lat, lng: to.lng }));
 }
 
 function checkoutFor(o: OrderFull): RazorpayCheckout | null {
@@ -126,6 +137,11 @@ export function toOrderDetail(o: OrderFull, viewer?: { id: string; role: Role })
     subtotalPaise: o.subtotalPaise,
     discountPaise: o.discountPaise,
     deliveryFeePaise: o.deliveryFeePaise,
+    codFeePaise: o.codFeePaise,
+    coinsUsed: o.coinsUsed,
+    coinDiscountPaise: o.coinDiscountPaise,
+    coinsEarned: o.coinsEarned,
+    eta: etaFor(o.area, addr),
     couponCode: o.couponCode,
     codCollectedPaise: o.codCollectedPaise,
     invoiceNo: o.invoiceNo,
@@ -244,20 +260,33 @@ async function checkCoupon(areaId: string, userId: string, code: string | null |
   return { coupon: c, message: null };
 }
 
-export async function quote(userId: string, addressId: string, couponCode?: string | null): Promise<Quote> {
-  const { area } = await resolveAddress(userId, addressId);
+async function coinBalanceOf(userId: string): Promise<number> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { coinBalance: true } });
+  return u?.coinBalance ?? 0;
+}
+
+export interface QuoteOptions {
+  couponCode?: string | null;
+  paymentMode?: 'RAZORPAY' | 'COD';
+  useCoins?: boolean;
+}
+
+export async function quote(userId: string, addressId: string, opts: QuoteOptions = {}): Promise<Quote> {
+  const { address, area } = await resolveAddress(userId, addressId);
   const slots = await slotOptions(area.id, 3);
   const date = slots.find((s) => s.available)?.date ?? todayIST();
-  const lines = await cartLines(userId, area.id, date);
+  const [lines, coinBalance] = await Promise.all([cartLines(userId, area.id, date), coinBalanceOf(userId)]);
   const subtotal = lines.reduce((s, l) => s + l.pricePaise * l.qty, 0);
-  const { coupon, message } = await checkCoupon(area.id, userId, couponCode, subtotal);
-  const totals = computeTotals(lines, area, coupon);
+  const { coupon, message } = await checkCoupon(area.id, userId, opts.couponCode, subtotal);
+  const totals = computeTotals(lines, area, coupon, { cod: opts.paymentMode === 'COD', coinBalance, useCoins: opts.useCoins });
   return {
     lines,
     ...totals,
+    coinBalance,
     minOrderPaise: area.minOrderPaise,
-    coupon: couponCode ? { code: couponCode, valid: !!coupon, message } : null,
+    coupon: opts.couponCode ? { code: opts.couponCode, valid: !!coupon, message } : null,
     slots,
+    eta: etaFor(area, address),
   };
 }
 
@@ -266,10 +295,11 @@ export async function quote(userId: string, addressId: string, couponCode?: stri
 export async function placeOrder(customer: { id: string; name: string | null; phone: string }, input: PlaceOrderInput) {
   const { address, area } = await resolveAddress(customer.id, input.addressId);
   // Independent reads go out together: each database round trip is slow, so fewer sequential waits matters.
-  const [slots, slot, cart] = await Promise.all([
+  const [slots, slot, cart, coinBalance] = await Promise.all([
     slotOptions(area.id, 3),
     prisma.deliverySlot.findUnique({ where: { id: input.slotId } }),
     loadCart(customer.id, area.id, input.slotDate),
+    input.useCoins ? coinBalanceOf(customer.id) : Promise.resolve(0),
   ]);
   const option = slots.find((x) => x.slotId === input.slotId && x.date === input.slotDate);
   if (!option || !option.available || !slot) throw badRequest('This delivery slot is no longer available. Please pick another.');
@@ -279,7 +309,7 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
   const subtotal = lines.reduce((sum, l) => sum + l.pricePaise * l.qty, 0);
   const { coupon, message } = await checkCoupon(area.id, customer.id, input.couponCode, subtotal);
   if (input.couponCode && !coupon) throw badRequest(message ?? 'Invalid coupon');
-  const totals = computeTotals(lines, area, coupon);
+  const totals = computeTotals(lines, area, coupon, { cod: input.paymentMode === 'COD', coinBalance, useCoins: input.useCoins });
   if (!totals.meetsMinOrder) throw badRequest(`Minimum order is ${formatINR(area.minOrderPaise)}`);
 
   const needs = new Map<string, { qty: number; name: string }>();
@@ -300,6 +330,11 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
           UPDATE "Coupon" SET "usedCount" = "usedCount" + 1
           WHERE "id" = ${coupon.id} AND ("usageLimit" IS NULL OR "usedCount" < "usageLimit")`;
         if (!ok) throw badRequest('This coupon has been fully used');
+      }
+      if (totals.coinsUsed > 0) {
+        // Atomic: the balance can never go negative, even with two orders placed at once.
+        const after = await tx.user.update({ where: { id: customer.id }, data: { coinBalance: { decrement: totals.coinsUsed } }, select: { coinBalance: true } });
+        if (after.coinBalance < 0) throw badRequest('You do not have enough Sabjii Coins');
       }
       const orderNo = await nextOrderNo(tx, area.id);
       const created = await tx.order.create({
@@ -325,8 +360,12 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
           channel: input.channel,
           status: prepaid ? 'PAYMENT_PENDING' : 'PLACED',
           subtotalPaise: totals.subtotalPaise,
-          discountPaise: totals.discountPaise,
+          // discountPaise holds the coupon and the coin discount together; coinDiscountPaise is the coin part.
+          discountPaise: totals.discountPaise + totals.coinDiscountPaise,
           deliveryFeePaise: totals.deliveryFeePaise,
+          codFeePaise: totals.codFeePaise,
+          coinsUsed: totals.coinsUsed,
+          coinDiscountPaise: totals.coinDiscountPaise,
           totalPaise: totals.totalPaise,
           finalPayablePaise: totals.totalPaise,
           paymentMode: input.paymentMode,
@@ -355,6 +394,12 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
         })),
       });
       if (coupon) await tx.couponRedemption.create({ data: { couponId: coupon.id, userId: customer.id, orderId: created.id } });
+      if (totals.coinsUsed > 0) {
+        const bal = await tx.user.findUniqueOrThrow({ where: { id: customer.id }, select: { coinBalance: true } });
+        await tx.coinTxn.create({
+          data: { userId: customer.id, orderId: created.id, type: 'SPEND', coins: -totals.coinsUsed, balanceAfter: bal.coinBalance, note: `Used on ${orderNo}` },
+        });
+      }
       const eventRow = await tx.orderEvent.create({ data: { orderId: created.id, status: created.status, actorId: actor.id, actorName: actor.name } });
       await tx.stockMovement.createMany({
         data: [...needs].map(([itemId, n]) => ({ areaId: area.id, itemId, type: 'SALE' as const, qty: -n.qty, refType: 'Order', refId: created.id })),
@@ -375,7 +420,7 @@ export async function placeOrder(customer: { id: string; name: string | null; ph
   }
 
   // Everything the response needs is already in hand, so skip re-reading the order.
-  const full: OrderFull = { ...order, items, events: [event], refunds: [], rating: null, issues: [], slot, rider: null, payments: payment ? [payment] : [] };
+  const full: OrderFull = { ...order, items, events: [event], refunds: [], rating: null, issues: [], slot, area: { lat: area.lat, lng: area.lng }, rider: null, payments: payment ? [payment] : [] };
   return toOrderDetail(full, { id: customer.id, role: 'CUSTOMER' });
 }
 
@@ -497,12 +542,14 @@ export async function cancelOrder(orderId: string, actor: Actor, reason: string)
   const o = await loadOrder(orderId);
   if (actor.role === 'CUSTOMER') {
     if (o.customerId !== actor.id) throw forbidden();
-    if (!customerCanCancel(o)) throw badRequest('The cancellation window for this slot has closed. Please contact support.');
+    if (!customerCanCancel(o)) throw badRequest('This order has already been delivered, so it can no longer be cancelled.');
   }
   assertTransition(o.status, 'CANCELLED', actor);
+  const dispatched = ['ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'].includes(o.status);
 
   await prisma.$transaction(async (tx) => {
-    await tx.order.update({ where: { id: o.id }, data: { status: 'CANCELLED', cancelReason: reason, riderId: null } });
+    // The rider stays on the order after dispatch so they see it was cancelled and can return the goods.
+    await tx.order.update({ where: { id: o.id }, data: { status: 'CANCELLED', cancelReason: reason, ...(dispatched ? {} : { riderId: null }) } });
     await addEvent(tx, o.id, 'CANCELLED', actor, reason);
     if (o.slotDate) {
       // One statement for the stock and one for the ledger, however many items the order has.
@@ -522,10 +569,19 @@ export async function cancelOrder(orderId: string, actor: Actor, reason: string)
     const held = prepaidHeld(o);
     await createRefund(tx, o, 'CANCEL', held, `Order cancelled: ${reason}`, true);
     await tx.payment.updateMany({ where: { orderId: o.id, status: 'CREATED' }, data: { status: 'FAILED' } });
+    if (o.coinsUsed > 0 && o.customerId) {
+      const after = await tx.user.update({ where: { id: o.customerId }, data: { coinBalance: { increment: o.coinsUsed } }, select: { coinBalance: true } });
+      await tx.coinTxn.create({
+        data: { userId: o.customerId, orderId: o.id, type: 'REFUND', coins: o.coinsUsed, balanceAfter: after.coinBalance, note: `${o.orderNo} cancelled` },
+      });
+    }
   });
   await processApprovedRefunds(o.id);
   if (actor.role !== 'CUSTOMER' && actor.role !== 'SYSTEM') {
     await notify([o.customerId], { title: 'Order cancelled', body: `${o.orderNo} was cancelled: ${reason}`, data: { orderId: o.id } });
+  }
+  if (dispatched && o.riderId && actor.id !== o.riderId) {
+    await notify([o.riderId], { title: 'Order cancelled', body: `${o.orderNo} was cancelled by the customer. Please return it to the store.`, data: { orderId: o.id } });
   }
   return loadOrder(o.id);
 }
@@ -570,7 +626,7 @@ export async function packOrder(orderId: string, actor: Actor, packed: { orderIt
       await tx.orderItem.update({ where: { id: it.id }, data: { packedQty: qty } });
       effSubtotal += it.pricePaise * qty;
     }
-    const newFinal = finalPayable(effSubtotal, o.discountPaise, o.deliveryFeePaise);
+    const newFinal = finalPayable(effSubtotal, o.discountPaise, o.deliveryFeePaise, o.codFeePaise);
     const invoiceNo = o.invoiceNo ?? (await nextInvoiceNo(tx, o.areaId));
     await tx.order.update({ where: { id: o.id }, data: { status: 'PACKED', finalPayablePaise: newFinal, invoiceNo } });
     await addEvent(tx, o.id, 'PACKED', actor, shortages.length ? `Short: ${shortages.join(', ')}` : null);
@@ -628,6 +684,23 @@ export async function riderStart(orderId: string, actor: Actor) {
   return loadOrder(o.id);
 }
 
+/** The rider is at the customer's door. From here the customer can open the box, accept, or reject. */
+export async function riderArrived(orderId: string, actor: Actor) {
+  const o = await loadOrder(orderId);
+  if (o.riderId !== actor.id) throw forbidden('This order is not assigned to you');
+  assertTransition(o.status, 'ARRIVED', actor);
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({ where: { id: o.id }, data: { status: 'ARRIVED' } });
+    await addEvent(tx, o.id, 'ARRIVED', actor);
+  });
+  await notify([o.customerId], {
+    title: 'Your delivery is at the door',
+    body: `${actor.name ?? 'Our delivery partner'} has arrived with ${o.orderNo}. Open the box and check before you accept.`,
+    data: { orderId: o.id },
+  });
+  return loadOrder(o.id);
+}
+
 /**
  * Doorstep handover: the freshness promise. Rejected items come off the bill on the spot.
  * COD customers simply pay less; prepaid customers get a refund, instant up to the area limit.
@@ -635,7 +708,7 @@ export async function riderStart(orderId: string, actor: Actor) {
 export async function riderDeliver(orderId: string, actor: Actor, input: DeliverInput) {
   const o = await loadOrder(orderId);
   if (o.riderId !== actor.id) throw forbidden('This order is not assigned to you');
-  if (o.status !== 'OUT_FOR_DELIVERY') throw new AppError(409, 'INVALID_STATUS', 'Start the delivery first');
+  if (o.status !== 'OUT_FOR_DELIVERY' && o.status !== 'ARRIVED') throw new AppError(409, 'INVALID_STATUS', 'Start the delivery first');
   const area = await prisma.area.findUniqueOrThrow({ where: { id: o.areaId } });
 
   const rejections = new Map(input.rejections.map((r) => [r.orderItemId, r]));
@@ -650,13 +723,14 @@ export async function riderDeliver(orderId: string, actor: Actor, input: Deliver
     const rej = rejections.get(it.id)?.qty ?? 0;
     effSubtotal += it.pricePaise * Math.max(0, (it.packedQty ?? it.qty) - rej);
   }
-  const newFinal = finalPayable(effSubtotal, o.discountPaise, o.deliveryFeePaise);
+  const newFinal = finalPayable(effSubtotal, o.discountPaise, o.deliveryFeePaise, o.codFeePaise);
   const status: OrderStatus = input.rejections.length ? 'PARTIALLY_DELIVERED' : 'DELIVERED';
   const isCod = o.paymentMode === 'COD';
   const collected = isCod ? input.codCollectedPaise ?? newFinal : null;
   const held = prepaidHeld(o);
   const refundAmount = isCod ? 0 : Math.max(0, held - newFinal);
   const autoRefund = refundAmount <= area.autoRefundLimitPaise;
+  const earned = o.customerId ? coinsEarned(newFinal) : 0;
   const rejectedText = input.rejections
     .map((r) => `${o.items.find((i) => i.id === r.orderItemId)!.name} × ${r.qty} (${r.reason})`)
     .join(', ');
@@ -676,8 +750,13 @@ export async function riderDeliver(orderId: string, actor: Actor, input: Deliver
         deliveredAt: new Date(),
         codCollectedPaise: collected,
         paymentStatus: isCod ? 'PAID' : undefined,
+        coinsEarned: earned,
       },
     });
+    if (earned > 0 && o.customerId) {
+      const after = await tx.user.update({ where: { id: o.customerId }, data: { coinBalance: { increment: earned } }, select: { coinBalance: true } });
+      await tx.coinTxn.create({ data: { userId: o.customerId, orderId: o.id, type: 'EARN', coins: earned, balanceAfter: after.coinBalance, note: `Earned on ${o.orderNo}` } });
+    }
     await addEvent(tx, o.id, status, actor, rejectedText ? `Returned at door: ${rejectedText}` : null);
     if (refundAmount > 0) await createRefund(tx, o, 'DOORSTEP', refundAmount, `Returned at door: ${rejectedText}`, autoRefund);
     if (isCod && collected) {

@@ -2,9 +2,9 @@
  * Demo data: super admin, Jabalpur + Satna areas with admins and staff, a 30-item catalog,
  * three days of stock, vendor rates, coupons and banners. Safe to re-run (upserts by natural keys).
  */
-import { PrismaClient, type Role, type UnitType } from '@prisma/client';
+import { Prisma, PrismaClient, type Role, type UnitType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { addDays, todayIST, ymdToDate } from '@sabjiilelo/shared';
+import { addDays, nutritionFor, todayIST, ymdToDate } from '@sabjiilelo/shared';
 
 const prisma = new PrismaClient();
 const PUBLIC_URL = (process.env.PUBLIC_URL ?? 'http://localhost:4000').replace(/\/$/, '');
@@ -100,6 +100,11 @@ async function upsertUser(phone: string, name: string, role: Role, areaId: strin
   });
 }
 
+const STORE_COORDS: Record<string, { lat: number; lng: number }> = {
+  JBP: { lat: 23.1815, lng: 79.9864 },
+  SAT: { lat: 24.6005, lng: 80.8322 },
+};
+
 async function seedArea(code: string, name: string, city: string, pincodes: string[], admin: { phone: string; name: string }, superId: string) {
   const area = await prisma.area.upsert({
     where: { code },
@@ -108,11 +113,10 @@ async function seedArea(code: string, name: string, city: string, pincodes: stri
       code,
       name,
       city,
+      ...STORE_COORDS[code],
       slots: {
-        create: [
-          { label: 'Morning', startTime: '07:00', endTime: '10:00', cutoffMinutesBefore: 600, capacity: 150, sort: 0 },
-          { label: 'Evening', startTime: '17:00', endTime: '20:00', cutoffMinutesBefore: 240, capacity: 150, sort: 1 },
-        ],
+        // One delivery window, 7 AM to 11 PM. Orders stay open until an hour before it closes.
+        create: [{ label: 'Delivery', startTime: '07:00', endTime: '23:00', cutoffMinutesBefore: 60, capacity: 400, sort: 0 }],
       },
     },
   });
@@ -141,6 +145,7 @@ async function seedArea(code: string, name: string, city: string, pincodes: stri
           unitType: it.unit,
           hsnCode: it.hsn,
           sourceNote: it.source,
+          nutrition: (nutritionFor(it.name) as unknown as Prisma.InputJsonValue) ?? Prisma.DbNull,
           variants: {
             create: it.variants.map(([label, baseQty, price, mrp], sort) => ({ label, baseQty, pricePaise: paise(price), mrpPaise: paise(mrp), sort })),
           },
@@ -172,7 +177,7 @@ async function seedArea(code: string, name: string, city: string, pincodes: stri
   if (!(await prisma.banner.count({ where: { areaId: area.id } }))) {
     await prisma.banner.createMany({
       data: [
-        { areaId: area.id, title: 'Farm fresh, every morning', subtitle: 'Picked at dawn, at your door by 10 AM', imageUrl: `${PUBLIC_URL}/static/images/hero-banner.webp`, sort: 0 },
+        { areaId: area.id, title: 'Farm fresh, every morning', subtitle: 'Fresh vegetables and fruits, delivered 7 AM to 11 PM', imageUrl: `${PUBLIC_URL}/static/images/hero-banner.webp`, sort: 0 },
         { areaId: area.id, title: 'Not fresh? Return it at the door', subtitle: 'Our freshness promise, no questions asked', imageUrl: `${PUBLIC_URL}/static/images/farmer-banner-v2.webp`, sort: 1 },
       ],
     });

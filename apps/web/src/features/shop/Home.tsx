@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Clock, ShieldCheck, Sparkles, Truck } from 'lucide-react';
+import { ChevronRight, Clock, Coins, PackageOpen, ShieldCheck, Sparkles, Truck } from 'lucide-react';
 import { qk } from '@sabjiilelo/api-client';
-import { formatDateLabel, formatINR, formatTime12, produceEmoji, type Category } from '@sabjiilelo/shared';
+import { COIN_EARN_PERCENT, formatDateLabel, formatINR, produceEmoji, type Category } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { useShop } from '../../lib/shop';
+import { useAuth } from '../../lib/auth';
 import { EmptyState, ErrorState, Skeleton } from '../../components/ui';
 import { ProductGrid, ProductGridSkeleton } from './components';
 
@@ -31,6 +32,7 @@ export function CategoryTile({ c, i }: { c: Category; i: number }) {
 
 export function Home() {
   const { area } = useShop();
+  const { user } = useAuth();
   const home = useQuery({ queryKey: qk.catalogHome(area?.id ?? ''), queryFn: () => api.catalog.home(area!.id), enabled: !!area });
   const [slide, setSlide] = useState(0);
   const banners = home.data?.banners ?? [];
@@ -56,25 +58,21 @@ export function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-deep/80 via-deep/40 to-transparent" />
         <div className="relative grid gap-6 p-6 sm:p-10 md:grid-cols-[1.5fr_1fr] md:items-center">
           <div>
-            {d?.nextSlot ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
-                <Clock size={14} />
-                Next delivery: {formatDateLabel(d.nextSlot.date)}, {formatTime12(d.nextSlot.startTime)}–{formatTime12(d.nextSlot.endTime)}
-              </span>
-            ) : (
-              <Skeleton className="h-6 w-64 bg-white/20" />
-            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
+              <Clock size={14} />
+              Delivery 7 AM – 11 PM{d?.nextSlot ? ` · ${formatDateLabel(d.nextSlot.date)}` : ''} · Open-box delivery
+            </span>
             <h1 key={slide} className="fade-up mt-4 text-3xl font-bold leading-tight text-white sm:text-[42px]">
               {banners[slide]?.title ?? 'Farm fresh, every morning'}
             </h1>
-            <p className="mt-2 max-w-md text-white/85">{banners[slide]?.subtitle ?? 'Vegetables & fruits picked at dawn and delivered in your slot.'}</p>
+            <p className="mt-2 max-w-md text-white/85">{banners[slide]?.subtitle ?? 'Vegetables & fruits picked at dawn and delivered 7 AM – 11 PM.'}</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {d?.categories[0] && (
                 <Link to={`/category/${d.categories[0].id}`} className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-sm transition hover:bg-cream">
                   Shop now
                 </Link>
               )}
-              <span className="font-script text-2xl text-[#9be36f]">Sabjii le lo, taaza le lo!</span>
+              <span className="font-script text-2xl text-[#9be36f]">Taazi taazi sabji le lo</span>
             </div>
           </div>
           <img src="/icons/basket.webp" alt="" className="animate-leaf mx-auto hidden h-52 w-52 object-contain drop-shadow-2xl md:block" />
@@ -89,13 +87,14 @@ export function Home() {
       </section>
 
       {/* Promises */}
-      <section className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0">
+      <section className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:px-0">
         {[
           { icon: <ShieldCheck size={20} />, title: 'Freshness promise', text: 'Not fresh? Return it at the door' },
-          { icon: <Truck size={20} />, title: d ? `Free delivery above ${formatINR(d.area.freeDeliveryAbovePaise)}` : 'Free delivery', text: 'In the slot you choose' },
+          { icon: <PackageOpen size={20} />, title: 'Open-box delivery', text: 'Check at the door. Cancel until handover' },
+          { icon: <Truck size={20} />, title: d ? `Free delivery above ${formatINR(d.area.freeDeliveryAbovePaise)}` : 'Free delivery', text: 'Every day, 7 AM – 11 PM' },
           { icon: <Sparkles size={20} />, title: 'Direct from the mandi', text: 'Bought fresh every morning' },
         ].map((p) => (
-          <div key={p.title} className="flex min-w-[240px] items-center gap-3 rounded-2xl border border-line/70 bg-white p-3.5">
+          <div key={p.title} className="flex min-w-[240px] items-center gap-3 rounded-2xl border border-line/70 bg-white p-3.5 shadow-sm sm:min-w-0">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-light-green text-primary">{p.icon}</span>
             <span>
               <span className="block text-sm font-semibold text-ink">{p.title}</span>
@@ -104,6 +103,18 @@ export function Home() {
           </div>
         ))}
       </section>
+
+      {/* Sabjii Coins */}
+      <Link to={user ? '/account/coins' : '/login?next=/account/coins'} className="group flex items-center gap-4 overflow-hidden rounded-3xl bg-gradient-to-r from-amber-100 via-amber-50 to-cream p-4 ring-1 ring-amber-200/70 transition hover:shadow-card sm:p-5">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-400 text-white shadow-sm transition group-hover:rotate-12">
+          <Coins size={26} />
+        </span>
+        <span className="flex-1">
+          <span className="block font-semibold text-ink">Earn Sabjii Coins on every order</span>
+          <span className="text-sm text-body/80">Get {COIN_EARN_PERCENT}% back in coins when your order is delivered. 1 coin = ₹1 off your next bill.</span>
+        </span>
+        <ChevronRight className="shrink-0 text-amber-700" />
+      </Link>
 
       {/* Categories */}
       <section>
@@ -140,7 +151,7 @@ export function Home() {
           <div className="flex-1 text-center sm:text-left">
             <span className="font-script text-2xl text-primary">Our freshness promise</span>
             <h3 className="text-xl">Not fresh? Don't pay for it.</h3>
-            <p className="mt-1 max-w-xl text-sm text-body/80">Check every item at your door. Hand back anything you don't like and it comes off your bill instantly — refunds are automatic for prepaid orders.</p>
+            <p className="mt-1 max-w-xl text-sm text-body/80">Open the box at your door and check every item. Hand back anything you don't like and it comes off your bill instantly, or reject the whole order. Refunds are automatic for prepaid orders.</p>
           </div>
           <Link to="/help" className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white">
             How it works

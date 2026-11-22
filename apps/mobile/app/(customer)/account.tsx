@@ -10,12 +10,14 @@ import { useAuth } from '../../lib/auth';
 import { useShop } from '../../lib/shop';
 import { MenuGroup, MenuRow, SupportGroup, useConfirmLogout } from '../../components/AccountMenu';
 import { LinearGradientFallback } from '../../components/Hero';
-import { Row, Screen, T, colors, font } from '../../components/ui';
+import { CoinChip, Row, Screen, T, colors, font } from '../../components/ui';
+import { useCoins } from '../../lib/coins';
 
 export default function Account() {
   const { user } = useAuth();
   const { area, pincode } = useShop();
   const logout = useConfirmLogout();
+  const { balance } = useCoins();
   const orders = useQuery({ queryKey: [...qk.myOrders, 1], queryFn: () => api.me.orders(1) });
   const unread = useQuery({ queryKey: qk.notifications, queryFn: () => api.notifications.list() });
   const since = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '–';
@@ -42,7 +44,10 @@ export default function Account() {
             <Ionicons name="create-outline" size={20} color="#fff" />
           </Pressable>
         </Row>
-        <Row style={{ gap: 10, marginTop: 16 }}>
+        <View style={{ marginTop: 14 }}>
+          <CoinChip light coins={balance} onPress={() => router.push('/coins')} />
+        </View>
+        <Row style={{ gap: 10, marginTop: 12 }}>
           {[
             { v: String(orders.data?.total ?? '–'), l: 'Orders' },
             { v: since, l: 'Member since' },
@@ -59,6 +64,7 @@ export default function Account() {
       <Row style={{ gap: 10, marginTop: 16 }}>
         {[
           { icon: 'receipt-outline' as const, label: 'Orders', to: '/(customer)/orders' as const },
+          { icon: 'logo-bitcoin' as const, label: 'Coins', to: '/coins' as const },
           { icon: 'location-outline' as const, label: 'Addresses', to: '/addresses' as const },
           { icon: 'notifications-outline' as const, label: 'Alerts', to: '/notifications' as const, badge: unread.data?.unread },
         ].map((t) => (
@@ -73,6 +79,7 @@ export default function Account() {
       </Row>
 
       <MenuGroup title="Your account">
+        <MenuRow icon="wallet-outline" label="Sabjii Coins" hint={`${balance} coins · earn on every order`} onPress={() => router.push('/coins')} />
         <MenuRow icon="person-outline" label="Edit profile" hint="Name, email" onPress={() => router.push('/profile')} />
         <MenuRow icon="map-outline" label="Delivery location" hint={`${area?.name ?? ''} ${pincode ?? ''}`} onPress={() => router.push('/location')} />
         <MenuRow icon="home-outline" label="Saved addresses" onPress={() => router.push('/addresses')} />
@@ -88,7 +95,7 @@ export default function Account() {
       <View style={{ alignItems: 'center', marginTop: 24 }}>
         <Image source={require('../../assets/logo.png')} style={{ width: 54, height: 54 }} contentFit="contain" />
         <T v="script" style={{ marginTop: 4 }}>
-          Sabjii le lo, taaza le lo!
+          Taazi taazi sabji le lo
         </T>
         <T v="tiny">Version {APP_VERSION}</T>
       </View>

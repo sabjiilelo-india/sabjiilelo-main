@@ -25,7 +25,7 @@ export async function slotOptions(areaId: string, days = 3, now = new Date()): P
     for (const s of slots) {
       if (!s.daysOfWeek.includes(dayOfWeek(date))) continue;
       if (istInstant(date, s.endTime) <= now) continue;
-      const cutoffAt = slotCutoff(date, s.startTime, s.cutoffMinutesBefore);
+      const cutoffAt = slotCutoff(date, s.endTime, s.cutoffMinutesBefore);
       const remaining = Math.max(0, s.capacity - (used.get(`${s.id}:${date}`) ?? 0));
       out.push({
         slotId: s.id,
@@ -52,10 +52,10 @@ export async function catalogDate(areaId: string): Promise<{ date: string; nextS
   return { date: nextSlot?.date ?? addDays(todayIST(), 1), nextSlot };
 }
 
-/** Whether a customer can still cancel: before the cutoff of the order's slot. */
+/** Whether new orders can still be placed for the order's slot (its cutoff has not passed). */
 export async function beforeCutoff(slotId: string | null, slotDate: Date | null, now = new Date()): Promise<boolean> {
   if (!slotId || !slotDate) return false;
   const slot = await prisma.deliverySlot.findUnique({ where: { id: slotId } });
   if (!slot) return false;
-  return now < slotCutoff(slotDate.toISOString().slice(0, 10), slot.startTime, slot.cutoffMinutesBefore);
+  return now < slotCutoff(slotDate.toISOString().slice(0, 10), slot.endTime, slot.cutoffMinutesBefore);
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { formatINR, type CatalogItem, type Variant } from '@sabjiilelo/shared';
 import { useAuth } from '../lib/auth';
 import { useCart } from '../lib/shop';
@@ -27,8 +28,13 @@ export function AddButton({ item, variant, small = true }: { item: CatalogItem; 
   if (qty > 0) return <Stepper qty={qty} onChange={(q) => setQty(variant.id, q)} max={Math.min(50, max)} small={small} />;
   return (
     <Pressable
-      onPress={() => (user ? setQty(variant.id, 1) : router.push('/login'))}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        if (user) setQty(variant.id, 1);
+        else router.push('/login');
+      }}
       style={({ pressed }) => ({
+        transform: [{ scale: pressed ? 0.95 : 1 }],
         width: w,
         height: h,
         borderRadius: 12,
@@ -49,9 +55,9 @@ export function ProductCard({ item, width }: { item: CatalogItem; width: number 
   const v = item.variants[vi] ?? item.variants[0]!;
   const off = discountPct(v);
   return (
-    <View style={[s.card, { width, padding: 8, overflow: 'hidden', opacity: item.remainingQty <= 0 ? 0.6 : 1 }]}>
-      <Pressable onPress={() => router.push(`/item/${item.id}`)} style={{ borderRadius: 14, overflow: 'hidden' }}>
-        <ProduceImage uri={item.images[0]} name={item.name} size={width - 16} style={{ borderRadius: 14, height: (width - 16) * 0.78 }} />
+    <View style={[s.card, { width, padding: 8, overflow: 'hidden', borderRadius: 22, opacity: item.remainingQty <= 0 ? 0.6 : 1 }]}>
+      <Pressable onPress={() => router.push(`/item/${item.id}`)} style={({ pressed }) => ({ borderRadius: 16, overflow: 'hidden', transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+        <ProduceImage uri={item.images[0]} name={item.name} size={width - 16} style={{ borderRadius: 16, height: (width - 16) * 0.78 }} />
         {off > 0 && (
           <View style={{ position: 'absolute', top: 0, left: 0, backgroundColor: colors.accent, borderBottomRightRadius: 12, paddingHorizontal: 7, paddingVertical: 4 }}>
             <Text style={{ color: '#fff', fontFamily: font.bold, fontSize: 10, lineHeight: 12 }}>{off}%{'\n'}OFF</Text>
@@ -64,6 +70,13 @@ export function ProductCard({ item, width }: { item: CatalogItem; width: number 
             {item.sourceNote ? `🌱 ${item.sourceNote}` : 'Fresh today'}
           </T>
         </View>
+        {!!item.nutrition?.tag && (
+          <View style={{ alignSelf: 'flex-start', backgroundColor: '#fff3d6', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4, maxWidth: '100%' }}>
+            <T v="tiny" style={{ color: '#8a5a00' }} numberOfLines={1}>
+              ✨ {item.nutrition.tag}
+            </T>
+          </View>
+        )}
         <Pressable onPress={() => router.push(`/item/${item.id}`)}>
           <T style={{ fontFamily: font.semibold, color: colors.ink, minHeight: 38, fontSize: 13.5, lineHeight: 19 }} numberOfLines={2}>
             {item.name}

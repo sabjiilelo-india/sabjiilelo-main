@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import {
   bannerUpsertSchema,
   categoryUpsertSchema,
@@ -80,11 +81,12 @@ async function assertCategoryInArea(categoryId: string, areaId: string) {
 
 manageRouter.post('/items', requirePermission('manageCatalog'), async (req, res) => {
   const areaId = scopeArea(req);
-  const { variants, ...data } = body(req, itemUpsertSchema);
+  const { variants, nutrition, ...data } = body(req, itemUpsertSchema);
   await assertCategoryInArea(data.categoryId, areaId);
   const item = await prisma.item.create({
     data: {
       ...data,
+      nutrition: nutrition ?? Prisma.DbNull,
       areaId,
       variants: { create: variants.map(({ id: _id, ...v }, sort) => ({ ...v, sort })) },
     },
@@ -99,11 +101,12 @@ manageRouter.put('/items/:id', requirePermission('manageCatalog'), async (req, r
   const existing = await prisma.item.findUnique({ where: { id }, include: itemInclude });
   if (!existing) throw notFound('Item');
   assertSameArea(req, existing.areaId);
-  const { variants, ...data } = body(req, itemUpsertSchema);
+  const { variants, nutrition, ...data } = body(req, itemUpsertSchema);
   await assertCategoryInArea(data.categoryId, existing.areaId);
 
   const item = await prisma.$transaction(async (tx) => {
-    await tx.item.update({ where: { id }, data });
+    // Leaving nutrition out of the request keeps what is stored; null clears it.
+    await tx.item.update({ where: { id }, data: { ...data, ...(nutrition === undefined ? {} : { nutrition: nutrition ?? Prisma.DbNull }) } });
     const keep = new Set(variants.map((v) => v.id).filter(Boolean));
     // Removed pack sizes are deactivated, not deleted, so past orders and carts stay intact.
     await tx.itemVariant.updateMany({ where: { itemId: id, id: { notIn: [...keep] as string[] } }, data: { isActive: false } });

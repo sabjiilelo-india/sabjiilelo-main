@@ -7,7 +7,7 @@ import { api } from '../../lib/api';
 import { useShop } from '../../lib/shop';
 import { CartBar } from '../../components/CartBar';
 import { ProductGrid } from '../../components/ProductCard';
-import { Chip, Empty, Loader, Screen, T, colors, font } from '../../components/ui';
+import { Chip, Empty, Screen, SkeletonGrid, colors, font } from '../../components/ui';
 
 export default function Browse() {
   const { width } = useWindowDimensions();
@@ -39,11 +39,11 @@ export default function Browse() {
           ))}
         </ScrollView>
         {items.isLoading ? (
-          <Loader />
+          <SkeletonGrid width={width} rows={2} />
         ) : items.data?.items.length ? (
           <ProductGrid items={items.data.items} width={width} />
         ) : (
-          <Empty title="No matches" text="Try 'aloo', 'tomato' or 'apple'." />
+          <Empty image={require('../../assets/basket.webp')} title="No matches" text="Try 'aloo', 'tomato' or 'apple'." />
         )}
       </Screen>
       <CartBar />

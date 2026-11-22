@@ -6,6 +6,7 @@ import {
   issueCreateSchema,
   placeOrderSchema,
   quoteSchema,
+  type CoinSummary,
   ratingSchema,
   todayIST,
   ymdToDate,
@@ -125,9 +126,31 @@ customerRouter.get('/coupons', async (req, res) => {
   res.json(rows.filter((c) => c.usageLimit == null || c.usedCount < c.usageLimit).map(toCoupon));
 });
 
+/** Sabjii Coins balance and recent history. */
+customerRouter.get('/coins', async (req, res) => {
+  const userId = me(req).sub;
+  const [user, rows] = await Promise.all([
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { coinBalance: true } }),
+    prisma.coinTxn.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50, include: { order: { select: { orderNo: true } } } }),
+  ]);
+  const out: CoinSummary = {
+    balance: user.coinBalance,
+    history: rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      coins: r.coins,
+      balanceAfter: r.balanceAfter,
+      note: r.note,
+      orderNo: r.order?.orderNo ?? null,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  };
+  res.json(out);
+});
+
 customerRouter.post('/checkout/quote', async (req, res) => {
-  const { addressId, couponCode } = body(req, quoteSchema);
-  res.json(await quote(me(req).sub, addressId, couponCode));
+  const { addressId, couponCode, paymentMode, useCoins } = body(req, quoteSchema);
+  res.json(await quote(me(req).sub, addressId, { couponCode, paymentMode, useCoins }));
 });
 
 customerRouter.post('/orders', async (req, res) => {

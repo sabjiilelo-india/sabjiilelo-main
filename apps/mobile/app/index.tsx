@@ -1,9 +1,10 @@
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
-import { colors } from '@sabjiilelo/theme';
 import { useAuth } from '../lib/auth';
 import { useShop } from '../lib/shop';
+
+const SPLASH_BG = '#fbf6ea';
 
 /** Splash + role router: each app role has its own tab group. */
 export default function Index() {
@@ -12,9 +13,14 @@ export default function Index() {
 
   if (status === 'loading' || !ready) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors['dark-green'], alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={require('../assets/logo.png')} style={{ width: 160, height: 160 }} contentFit="contain" />
-        <Image source={require('../assets/brand-truck.webp')} style={{ width: 120, height: 60, marginTop: 24 }} contentFit="contain" />
+      // Same cream background and centred logo as the native splash, so nothing jumps when the app opens.
+      <View style={{ flex: 1, backgroundColor: SPLASH_BG, alignItems: 'center', justifyContent: 'center' }}>
+        <Image source={require('../assets/logo.png')} style={{ width: 220, height: 220 }} contentFit="contain" />
+        <Image
+          source={require('../assets/brand-truck.webp')}
+          style={{ position: 'absolute', bottom: 72, width: 120, height: 60 }}
+          contentFit="contain"
+        />
       </View>
     );
   }

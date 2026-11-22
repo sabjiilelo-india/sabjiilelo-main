@@ -36,7 +36,7 @@ export function Dashboard() {
   const [date, setDate] = useState(todayIST());
   const q = useQuery({ queryKey: qk.dashboard(date), queryFn: () => api.reports.dashboard(date), refetchInterval: 60_000 });
   const d = q.data;
-  const pipeline: OrderStatus[] = ['PLACED', 'CONFIRMED', 'PACKING', 'PACKED', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'];
+  const pipeline: OrderStatus[] = ['PLACED', 'CONFIRMED', 'PACKING', 'PACKED', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED', 'DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'];
   const isAdmin = user?.role === 'ADMIN';
   const maxDay = Math.max(1, ...(d?.last7Days.map((x) => x.valuePaise) ?? [1]));
   const tab = date === todayIST() ? 'today' : date === addDays(todayIST(), 1) ? 'tomorrow' : 'other';

@@ -11,6 +11,7 @@ import {
   ISSUE_TYPE_LABEL,
   effectiveLineQty,
   formatDateLabel,
+  formatEta,
   formatINR,
   formatTime12,
   type IssueType,
@@ -18,7 +19,7 @@ import {
 } from '@sabjiilelo/shared';
 import { api, tokenStore } from '../../lib/api';
 import { startPayment } from '../../lib/payment';
-import { Badge, Button, Card, Chip, Divider, Empty, Loader, ProduceImage, Row, Screen, StatusBadge, T, colors, font } from '../../components/ui';
+import { Badge, Button, Card, Chip, Divider, Empty, ProduceImage, Row, Screen, Skeleton, StatusBadge, T, colors, font } from '../../components/ui';
 import { PhotoPicker } from '../../components/PhotoPicker';
 import { OrderTracker } from '../../components/OrderTracker';
 import { toast } from '../../components/toast';
@@ -31,7 +32,12 @@ export default function OrderScreen() {
   const q = useQuery({
     queryKey: qk.myOrder(id),
     queryFn: () => api.me.order(id),
-    refetchInterval: (query) => (query.state.data && ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'].includes(query.state.data.status) ? false : 20_000),
+    refetchInterval: (query) => {
+      const st = query.state.data?.status;
+      if (st && ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'].includes(st)) return false;
+      // Poll faster once the order is on the road so the "at your door" banner shows up quickly.
+      return st === 'OUT_FOR_DELIVERY' || st === 'ARRIVED' ? 8_000 : 20_000;
+    },
   });
   const [issueOpen, setIssueOpen] = useState(false);
   const [picked, setPicked] = useState(0);
@@ -47,10 +53,19 @@ export default function OrderScreen() {
     },
   });
 
-  if (q.isLoading) return <Loader />;
+  if (q.isLoading) {
+    return (
+      <Screen edges={[]}>
+        <Skeleton height={220} radius={20} />
+        <Skeleton height={200} radius={20} style={{ marginTop: 12 }} />
+      </Screen>
+    );
+  }
   if (!q.data) return <Empty title="Order not found" />;
   const o = q.data;
   const effSubtotal = o.items.reduce((s, i) => s + i.pricePaise * effectiveLineQty(i), 0);
+  const couponDiscount = Math.max(0, o.discountPaise - o.coinDiscountPaise);
+  const onTheWay = ['ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'].includes(o.status);
 
   return (
     <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
@@ -59,8 +74,22 @@ export default function OrderScreen() {
           <Image source={require('../../assets/basket.webp')} style={{ width: 44, height: 44 }} contentFit="contain" />
           <View style={{ flex: 1 }}>
             <T style={{ color: '#fff', fontFamily: font.semibold, fontSize: 16 }}>Order placed! 🎉</T>
-            <T style={{ color: 'rgba(255,255,255,0.85)' }}>We'll pick it fresh for your slot.</T>
+            <T style={{ color: 'rgba(255,255,255,0.85)' }}>We'll pick it fresh and bring it to your door.</T>
           </View>
+        </Card>
+      )}
+
+      {o.status === 'ARRIVED' && (
+        <Card style={{ backgroundColor: colors.accent, marginBottom: 12, borderColor: colors.accent }}>
+          <Row style={{ gap: 12, alignItems: 'flex-start' }}>
+            <Ionicons name="location" size={30} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <T style={{ color: '#fff', fontFamily: font.bold, fontSize: 17 }}>Your delivery partner is at your door</T>
+              <T style={{ color: 'rgba(255,255,255,0.95)', marginTop: 2 }}>
+                Open the box and check everything. Accept what is fresh and hand back the rest, or cancel the whole order below.
+              </T>
+            </View>
+          </Row>
         </Card>
       )}
 
@@ -71,8 +100,14 @@ export default function OrderScreen() {
         </Row>
         {o.slotDate && o.slot && (
           <T v="small" style={{ marginTop: 2 }}>
-            {formatDateLabel(o.slotDate)}, {o.slot.label} {formatTime12(o.slot.startTime)}–{formatTime12(o.slot.endTime)}
+            {formatDateLabel(o.slotDate)}, {formatTime12(o.slot.startTime)} – {formatTime12(o.slot.endTime)}
           </T>
+        )}
+        {o.eta && !['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED', 'ARRIVED'].includes(o.status) && (
+          <Row style={{ gap: 6, marginTop: 8 }}>
+            <Ionicons name="time-outline" size={16} color={colors.primary} />
+            <T style={{ color: colors.primary, fontFamily: font.medium }}>About {formatEta(o.eta)} once out for delivery</T>
+          </Row>
         )}
         {o.status === 'CANCELLED' ? (
           <View style={{ backgroundColor: '#fbe3e3', padding: 10, borderRadius: 10, marginTop: 12 }}>
@@ -81,10 +116,10 @@ export default function OrderScreen() {
         ) : (
           <OrderTracker status={o.status} />
         )}
-        {o.riderName && ['ASSIGNED', 'OUT_FOR_DELIVERY'].includes(o.status) && (
+        {o.riderName && onTheWay && (
           <Row style={{ gap: 10, marginTop: 14, backgroundColor: colors.mint, padding: 10, borderRadius: 12 }}>
             <Image source={require('../../assets/truck.webp')} style={{ width: 36, height: 36 }} contentFit="contain" />
-            <T style={{ flex: 1 }}>{o.riderName} is delivering your order.</T>
+            <T style={{ flex: 1 }}>{o.riderName} {o.status === 'ARRIVED' ? 'is at your door.' : 'is delivering your order.'}</T>
           </Row>
         )}
         {o.status === 'PAYMENT_PENDING' && o.razorpay && (
@@ -130,13 +165,24 @@ export default function OrderScreen() {
         })}
         <Divider />
         <Line k="Item total" v={formatINR(effSubtotal)} />
-        {o.discountPaise > 0 && <Line k={`Coupon ${o.couponCode ?? ''}`} v={`– ${formatINR(Math.min(o.discountPaise, effSubtotal))}`} />}
+        {couponDiscount > 0 && <Line k={`Coupon ${o.couponCode ?? ''}`} v={`– ${formatINR(Math.min(couponDiscount, effSubtotal))}`} />}
+        {o.coinDiscountPaise > 0 && <Line k={`Sabjii Coins (${o.coinsUsed})`} v={`– ${formatINR(o.coinDiscountPaise)}`} />}
         <Line k="Delivery fee" v={o.deliveryFeePaise && effSubtotal ? formatINR(o.deliveryFeePaise) : 'FREE'} />
+        {o.codFeePaise > 0 && effSubtotal > 0 && <Line k="Cash on delivery fee" v={formatINR(o.codFeePaise)} />}
         <Row style={{ justifyContent: 'space-between', marginTop: 6 }}>
           <T style={{ fontFamily: font.semibold, color: colors.ink }}>{o.paymentMode === 'COD' ? (o.codCollectedPaise != null ? 'Paid in cash' : 'Pay on delivery') : 'Paid online'}</T>
           <T style={{ fontFamily: font.bold, color: colors.ink, fontSize: 16 }}>{formatINR(o.codCollectedPaise ?? o.finalPayablePaise)}</T>
         </Row>
       </Card>
+
+      {o.coinsEarned > 0 && (
+        <Card style={{ marginTop: 12, backgroundColor: '#fff8e6', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <T style={{ fontSize: 28 }}>🪙</T>
+          <T style={{ flex: 1, color: colors.ink }}>
+            You earned <T style={{ fontFamily: font.bold, color: '#8a5a00' }}>{o.coinsEarned} Sabjii Coins</T> on this order. Use them on your next one!
+          </T>
+        </Card>
+      )}
 
       {o.refunds.length > 0 && (
         <Card style={{ marginTop: 12 }}>
@@ -209,12 +255,15 @@ export default function OrderScreen() {
         {o.canReportIssue && <Button title="Report an issue" variant="outline" onPress={() => setIssueOpen(true)} />}
         {o.canCancel && (
           <Button
-            title="Cancel order"
-            variant="ghost"
+            title={o.status === 'ARRIVED' ? 'Reject whole order' : 'Cancel order'}
+            variant={o.status === 'ARRIVED' ? 'danger' : 'ghost'}
             onPress={async () => {
               const reason = await choose({
                 title: 'Cancel this order?',
-                message: o.paymentStatus === 'PAID' ? 'The full amount goes back to your payment method.' : 'Tell us why — it helps us improve.',
+                message:
+                  (onTheWay
+                    ? 'Open-box delivery: you can cancel any time until the order is handed over. '
+                    : '') + (o.paymentStatus === 'PAID' ? 'The full amount goes back to your payment method.' : 'Tell us why, it helps us improve.'),
                 tone: 'danger',
                 icon: 'close-circle',
                 cancelText: 'Keep my order',

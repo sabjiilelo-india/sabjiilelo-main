@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { appPathFor, notificationTarget } from '@sabjiilelo/shared';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { Button, Card, Empty, Loader, Screen, T, colors, font } from '../components/ui';
+import { Button, Card, Empty, Screen, SkeletonList, T, colors, font } from '../components/ui';
 
 export default function Notifications() {
   const { user } = useAuth();
@@ -26,7 +26,13 @@ export default function Notifications() {
   useEffect(() => {
     if (unread) api.notifications.markRead().then(() => qc.invalidateQueries({ queryKey: qk.notifications }));
   }, [unread, qc]);
-  if (q.isLoading) return <Loader />;
+  if (q.isLoading) {
+    return (
+      <Screen edges={[]}>
+        <SkeletonList count={5} height={72} />
+      </Screen>
+    );
+  }
   return (
     <Screen edges={[]} refreshing={q.isRefetching} onRefresh={() => q.refetch()}>
       {!items.length ? (

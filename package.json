@@ -15,7 +15,9 @@
     "dev:mobile:web": "pnpm --filter @sabjiilelo/mobile web",
     "dev:mobile:tunnel": "pnpm --filter @sabjiilelo/mobile start:tunnel",
     "db:seed:demo": "pnpm --filter @sabjiilelo/api db:seed:demo",
-    "db:seed:images": "pnpm --filter @sabjiilelo/api db:seed:images"
+    "db:seed:images": "pnpm --filter @sabjiilelo/api db:seed:images",
+    "db:seed:nutrition": "pnpm --filter @sabjiilelo/api db:seed:nutrition",
+    "db:update:delivery": "pnpm --filter @sabjiilelo/api db:update:delivery"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

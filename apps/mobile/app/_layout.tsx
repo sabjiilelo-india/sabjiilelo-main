@@ -60,6 +60,7 @@ export default function RootLayout() {
                 <Stack.Screen name="checkout" options={{ title: 'Checkout' }} />
                 <Stack.Screen name="pay" options={{ title: 'Payment', presentation: 'modal' }} />
                 <Stack.Screen name="order/[id]" options={{ title: 'Order details' }} />
+                <Stack.Screen name="coins" options={{ title: 'Sabjii Coins' }} />
                 <Stack.Screen name="addresses" options={{ title: 'Addresses' }} />
                 <Stack.Screen name="address-form" options={{ title: 'Address', presentation: 'modal' }} />
                 <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />

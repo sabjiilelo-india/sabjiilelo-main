@@ -6,11 +6,11 @@ import { useCart } from '../lib/shop';
 import { colors, font } from './ui';
 
 /** Floating "view cart" bar shown on browsing screens once something is in the cart. */
-export function CartBar() {
+export function CartBar({ bottom = 12 }: { bottom?: number }) {
   const { cart } = useCart();
   if (!cart.itemCount) return null;
   return (
-    <View style={{ position: 'absolute', left: 12, right: 12, bottom: 12 }}>
+    <View style={{ position: 'absolute', left: 12, right: 12, bottom }}>
       <Pressable
         onPress={() => router.navigate('/(customer)/cart')}
         style={{

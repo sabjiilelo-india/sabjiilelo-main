@@ -58,6 +58,8 @@ export const areaFeesSchema = z.object({
   freeDeliveryAbovePaise: paise,
   autoRefundLimitPaise: paise,
   demandBufferPct: z.number().int().min(0).max(100),
+  lat: z.number().min(-90).max(90).nullable().optional(),
+  lng: z.number().min(-180).max(180).nullable().optional(),
 });
 export const areaCreateSchema = z
   .object({
@@ -117,6 +119,17 @@ export const variantInputSchema = z.object({
   mrpPaise: paise,
   isActive: z.boolean().default(true),
 });
+const nutritionSchema = z.object({
+  per: z.string().trim().min(1).max(20),
+  calories: z.number().min(0),
+  protein: z.number().min(0),
+  carbs: z.number().min(0),
+  fibre: z.number().min(0),
+  fat: z.number().min(0),
+  highlights: z.array(z.object({ name: z.string().trim().min(1).max(40), amount: z.string().trim().max(40), dv: z.number().min(0).max(2000).optional() })).max(8),
+  benefits: z.array(z.string().trim().min(1).max(120)).max(6),
+  tag: z.string().trim().max(40).optional(),
+});
 export const itemUpsertSchema = z.object({
   categoryId: id,
   name: z.string().trim().min(2),
@@ -127,6 +140,7 @@ export const itemUpsertSchema = z.object({
   gstRate: z.number().int().min(0).max(28).default(0),
   isActive: z.boolean().default(true),
   sourceNote: z.string().trim().max(120).nullable().optional(),
+  nutrition: nutritionSchema.nullable().optional(),
   variants: z.array(variantInputSchema).min(1, 'Add at least one pack size'),
 });
 export const priceBoardSchema = z.object({
@@ -185,13 +199,19 @@ export const addressUpsertSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 export const cartSetSchema = z.object({ variantId: id, qty: z.number().int().min(0).max(50) });
-export const quoteSchema = z.object({ addressId: id, couponCode: z.string().trim().toUpperCase().optional().nullable() });
+export const quoteSchema = z.object({
+  addressId: id,
+  couponCode: z.string().trim().toUpperCase().optional().nullable(),
+  paymentMode: z.enum(['RAZORPAY', 'COD']).optional(),
+  useCoins: z.boolean().optional(),
+});
 export const placeOrderSchema = z.object({
   addressId: id,
   slotId: id,
   slotDate: ymdSchema,
   couponCode: z.string().trim().toUpperCase().optional().nullable(),
   paymentMode: z.enum(['RAZORPAY', 'COD']),
+  useCoins: z.boolean().default(false),
   channel: z.enum(['APP', 'WEB']).default('WEB'),
   note: z.string().trim().max(200).optional(),
 });

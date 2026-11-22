@@ -16,7 +16,12 @@ type Rejection = { qty: number; reason: string; photo: string | null };
 export default function DeliveryOrder() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: qk.riderOrder(id), queryFn: () => api.rider.order(id) });
+  const q = useQuery({
+    queryKey: qk.riderOrder(id),
+    queryFn: () => api.rider.order(id),
+    // The customer can cancel until handover, so keep checking while the order is open.
+    refetchInterval: (query) => (query.state.data && ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'].includes(query.state.data.status) ? false : 15_000),
+  });
   const [rej, setRej] = useState<Record<string, Rejection>>({});
   const [cash, setCash] = useState<string | null>(null);
   const update = (o: OrderDetail) => {
@@ -24,6 +29,14 @@ export default function DeliveryOrder() {
     qc.invalidateQueries({ queryKey: ['rider'] });
   };
   const start = useMutation({ mutationFn: () => api.rider.start(id), onSuccess: update, onError: (e) => toast((e as Error).message) });
+  const arrived = useMutation({
+    mutationFn: () => api.rider.arrived(id),
+    onSuccess: (o) => {
+      update(o);
+      toast('Customer notified: you are at the door');
+    },
+    onError: (e) => toast((e as Error).message),
+  });
   const deliver = useMutation({
     mutationFn: (payable: number) =>
       api.rider.deliver(id, {
@@ -45,7 +58,8 @@ export default function DeliveryOrder() {
   const o = q.data;
   const a = o.address;
   const eff = o.items.reduce((s, i) => s + i.pricePaise * Math.max(0, effectiveLineQty(i) - (rej[i.id]?.qty ?? 0)), 0);
-  const payable = finalPayable(eff, o.discountPaise, o.deliveryFeePaise);
+  const payable = finalPayable(eff, o.discountPaise, o.deliveryFeePaise, o.codFeePaise);
+  const handover = o.status === 'OUT_FOR_DELIVERY' || o.status === 'ARRIVED';
   const navUrl = a
     ? a.lat && a.lng
       ? `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}`
@@ -70,12 +84,31 @@ export default function DeliveryOrder() {
         </Row>
       </Card>
 
+      {o.status === 'CANCELLED' && (
+        <Card style={{ marginTop: 12, backgroundColor: '#fbe3e3', borderColor: '#f3c4c4' }}>
+          <T style={{ fontFamily: font.semibold, color: colors.danger }}>This order was cancelled{o.cancelReason ? `: ${o.cancelReason}` : ''}</T>
+          <T v="small" style={{ marginTop: 2 }}>Do not hand it over. Bring the items back to the store.</T>
+        </Card>
+      )}
+
+      {o.status === 'OUT_FOR_DELIVERY' && (
+        <Button title="I've arrived" size="lg" icon="location" variant="accent" style={{ marginTop: 16 }} loading={arrived.isPending} onPress={() => arrived.mutate()} />
+      )}
+      {o.status === 'ARRIVED' && (
+        <Card style={{ marginTop: 12, backgroundColor: colors.mint }}>
+          <Row style={{ gap: 10 }}>
+            <Ionicons name="cube-outline" size={22} color={colors.primary} />
+            <T style={{ flex: 1, color: colors.ink }}>Open-box delivery: let the customer open the box and check. They can accept, hand items back, or reject the whole order.</T>
+          </Row>
+        </Card>
+      )}
+
       {o.status === 'ASSIGNED' && <Button title="Start delivery" size="lg" icon="bicycle" style={{ marginTop: 16 }} loading={start.isPending} onPress={() => start.mutate()} />}
 
-      {(o.status === 'ASSIGNED' || o.status === 'OUT_FOR_DELIVERY') && (
+      {(o.status === 'ASSIGNED' || handover) && (
         <Card style={{ marginTop: 12 }}>
-          <T v="h3">{o.status === 'OUT_FOR_DELIVERY' ? 'Check items with the customer' : 'Items'}</T>
-          {o.status === 'OUT_FOR_DELIVERY' && <T v="small">If anything isn't fresh, tap − to mark it returned.</T>}
+          <T v="h3">{handover ? 'Check items with the customer' : 'Items'}</T>
+          {handover && <T v="small">If anything isn't fresh, tap − to mark it returned.</T>}
           {o.items.map((i) => {
             const max = effectiveLineQty(i);
             const r = rej[i.id] ?? { qty: 0, reason: DOORSTEP_REJECT_REASONS[0], photo: null };
@@ -90,7 +123,7 @@ export default function DeliveryOrder() {
                       {i.variantLabel} × {max}
                     </T>
                   </View>
-                  {o.status === 'OUT_FOR_DELIVERY' && (
+                  {handover && (
                     <Row style={{ gap: 8 }}>
                       <T v="tiny">Return</T>
                       <Pressable hitSlop={6} onPress={() => setR({ qty: Math.max(0, r.qty - 1) })}>
@@ -119,13 +152,14 @@ export default function DeliveryOrder() {
         </Card>
       )}
 
-      {o.status === 'OUT_FOR_DELIVERY' && (
+      {handover && (
         <>
           <Card style={{ marginTop: 12 }}>
             <Row style={{ justifyContent: 'space-between' }}>
               <T v="h3">{o.paymentMode === 'COD' ? 'Collect cash' : 'Prepaid'}</T>
               <T style={{ fontFamily: font.bold, fontSize: 22, color: o.paymentMode === 'COD' ? colors.primary : colors.muted }}>{formatINR(payable)}</T>
             </Row>
+            {o.paymentMode === 'COD' && o.codFeePaise > 0 && payable > 0 && <T v="small" style={{ marginTop: 4 }}>Includes {formatINR(o.codFeePaise)} cash-on-delivery fee</T>}
             {o.paymentMode === 'COD' && (
               <View style={{ marginTop: 10 }}>
                 <T v="label">Cash received (₹)</T>

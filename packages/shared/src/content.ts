@@ -24,15 +24,15 @@ export const FAQ_SECTIONS: { title: string; icon: string; items: Faq[] }[] = [
     items: [
       {
         q: 'When will my order arrive?',
-        a: 'You choose a delivery slot at checkout — for example Tomorrow 7–10 AM or Today 5–8 PM. Our delivery partner arrives within that window.',
+        a: 'We deliver every day from 7 AM to 11 PM. Place your order and our delivery partner brings it the same day. At checkout you also see an estimate of the delivery time based on how far you are from our store.',
       },
       {
-        q: 'Until when can I order for a slot?',
-        a: 'Each slot closes a few hours before it starts so we can buy fresh from the mandi. The checkout only shows slots that are still open.',
+        q: 'Until when can I order for the day?',
+        a: 'Orders for the day are open until 10 PM. After that your order goes to the next morning.',
       },
       {
         q: 'Can I change or cancel my order?',
-        a: 'You can cancel for free from the order page until the slot cutoff. After that, please contact support and we will try our best to help.',
+        a: 'Yes, for free. You can cancel from the order page any time until the delivery partner reaches you. We deliver open-box: when the partner arrives, open the box, check everything, and accept it or reject the whole order.',
       },
       {
         q: 'Which areas do you deliver to?',

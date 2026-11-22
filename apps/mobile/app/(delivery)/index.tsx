@@ -5,7 +5,7 @@ import { formatINR } from '@sabjiilelo/shared';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { DeliveryList } from '../../components/DeliveryList';
-import { Card, Empty, Loader, Row, Screen, T, colors, font } from '../../components/ui';
+import { Card, Empty, Row, Screen, SkeletonList, T, colors, font } from '../../components/ui';
 
 export default function Deliveries() {
   const { user, setUser } = useAuth();
@@ -46,7 +46,7 @@ export default function Deliveries() {
       <T v="h3" style={{ marginBottom: 10 }}>
         To deliver ({q.data?.length ?? 0})
       </T>
-      {q.isLoading ? <Loader /> : q.data?.length ? <DeliveryList orders={q.data} /> : <Empty image={require('../../assets/truck.webp')} title="No deliveries assigned" text="New orders appear here when the store assigns them to you." />}
+      {q.isLoading ? <SkeletonList count={3} height={110} /> : q.data?.length ? <DeliveryList orders={q.data} /> : <Empty image={require('../../assets/truck.webp')} title="No deliveries assigned" text="New orders appear here when the store assigns them to you." />}
     </Screen>
   );
 }

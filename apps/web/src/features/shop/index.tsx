@@ -2,6 +2,7 @@ import { CategoriesPage, Home } from './Home';
 import { CategoryPage, ItemPage, SearchPage } from './Browse';
 import { CartPage } from './Cart';
 import { CheckoutPage } from './Checkout';
+import { CoinsPage } from './Coins';
 import { OrderDetailPage, OrdersPage } from './Orders';
 import { AboutPage, AccountPage, AddressesPage, HelpPage, NotificationsPage, PrivacyPage, ProfilePage, SettingsPage, TermsPage } from './Account';
 
@@ -18,6 +19,7 @@ type Page =
   | 'account'
   | 'profile'
   | 'addresses'
+  | 'coins'
   | 'settings'
   | 'help'
   | 'terms'
@@ -52,6 +54,8 @@ export default function Shop({ page }: { page: Page }) {
       return <ProfilePage />;
     case 'addresses':
       return <AddressesPage />;
+    case 'coins':
+      return <CoinsPage />;
     case 'settings':
       return <SettingsPage />;
     case 'help':

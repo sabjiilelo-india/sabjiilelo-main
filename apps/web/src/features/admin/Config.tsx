@@ -40,7 +40,7 @@ export function Slots() {
             </div>
             <div className="mt-3 space-y-1 text-sm">
               <div>
-                Orders close <b>{Math.floor(s.cutoffMinutesBefore / 60)}h {s.cutoffMinutesBefore % 60 ? `${s.cutoffMinutesBefore % 60}m` : ''}</b> before start
+                Orders close <b>{Math.floor(s.cutoffMinutesBefore / 60)}h {s.cutoffMinutesBefore % 60 ? `${s.cutoffMinutesBefore % 60}m` : ''}</b> before the window closes
               </div>
               <div>
                 Capacity <b>{s.capacity}</b> orders/day
@@ -70,7 +70,7 @@ function SlotForm({ slot, onClose }: { slot: DeliverySlot | null; onClose: () =>
     label: slot?.label ?? '',
     startTime: slot?.startTime ?? '07:00',
     endTime: slot?.endTime ?? '10:00',
-    cutoffMinutesBefore: slot?.cutoffMinutesBefore ?? 600,
+    cutoffMinutesBefore: slot?.cutoffMinutesBefore ?? 60,
     capacity: slot?.capacity ?? 100,
     daysOfWeek: slot?.daysOfWeek ?? [0, 1, 2, 3, 4, 5, 6],
     isActive: slot?.isActive ?? true,

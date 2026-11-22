@@ -26,7 +26,7 @@ const FILTERS: { value: string; label: string }[] = [
   { value: 'PLACED', label: 'New' },
   { value: 'CONFIRMED', label: 'Confirmed' },
   { value: 'PACKING,PACKED', label: 'Packing' },
-  { value: 'ASSIGNED,OUT_FOR_DELIVERY', label: 'On the way' },
+  { value: 'ASSIGNED,OUT_FOR_DELIVERY,ARRIVED', label: 'On the way' },
   { value: 'DELIVERED,PARTIALLY_DELIVERED', label: 'Delivered' },
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
@@ -354,8 +354,10 @@ export function OpsOrderDetail() {
           <Card className="space-y-1.5 p-5 text-sm">
             <h2 className="mb-2 text-base">Bill</h2>
             <Row k="Items" v={formatINR(effSubtotal)} />
-            {o.discountPaise > 0 && <Row k={`Coupon ${o.couponCode ?? ''}`} v={`– ${formatINR(Math.min(o.discountPaise, effSubtotal))}`} />}
+            {o.discountPaise - o.coinDiscountPaise > 0 && <Row k={`Coupon ${o.couponCode ?? ''}`} v={`– ${formatINR(Math.min(o.discountPaise - o.coinDiscountPaise, effSubtotal))}`} />}
+            {o.coinDiscountPaise > 0 && <Row k={`Sabjii Coins (${o.coinsUsed})`} v={`– ${formatINR(o.coinDiscountPaise)}`} />}
             <Row k="Delivery" v={formatINR(effSubtotal ? o.deliveryFeePaise : 0)} />
+            {o.codFeePaise > 0 && <Row k="COD fee" v={formatINR(effSubtotal ? o.codFeePaise : 0)} />}
             <div className="flex justify-between border-t border-line pt-2 font-semibold text-ink">
               <span>Payable</span>
               <span>{formatINR(o.finalPayablePaise)}</span>

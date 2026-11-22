@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
   ChevronLeft,
+  Coins,
   ChevronRight,
   FileText,
   HelpCircle,
@@ -32,6 +33,7 @@ import { HelpContent, LegalContent } from './Help';
 const MENU = [
   { to: '/account/profile', label: 'Edit profile', icon: UserRound, hint: 'Name, email' },
   { to: '/orders', label: 'My orders', icon: Package, hint: 'Track, reorder, invoices' },
+  { to: '/account/coins', label: 'Sabjii Coins', icon: Coins, hint: 'Earn on orders, spend at checkout' },
   { to: '/account/addresses', label: 'Saved addresses', icon: MapPin, hint: 'Home, work & more' },
   { to: '/notifications', label: 'Notifications', icon: Bell, hint: 'Order updates' },
   { to: '/account/settings', label: 'Settings', icon: Settings, hint: 'Alerts, account' },
@@ -56,6 +58,7 @@ export function useConfirmLogout() {
 function ProfileCard() {
   const { user } = useAuth();
   const orders = useQuery({ queryKey: [...qk.myOrders, 1], queryFn: () => api.me.orders(1), enabled: user?.role === 'CUSTOMER' });
+  const coins = useQuery({ queryKey: qk.coins, queryFn: () => api.me.coins(), enabled: user?.role === 'CUSTOMER', staleTime: 30_000 });
   const since = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '';
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-dark-green p-5 text-white">
@@ -71,11 +74,15 @@ function ProfileCard() {
           <Pencil size={18} />
         </Link>
       </div>
-      <div className="relative mt-4 grid grid-cols-2 gap-2 text-center">
+      <div className="relative mt-4 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-2xl bg-white/10 py-2">
           <div className="text-lg font-bold">{orders.data?.total ?? '–'}</div>
           <div className="text-[11px] text-white/75">Orders</div>
         </div>
+        <Link to="/account/coins" className="rounded-2xl bg-amber-400/90 py-2 text-ink transition hover:bg-amber-300">
+          <div className="text-lg font-bold">{coins.data?.balance ?? '–'}</div>
+          <div className="text-[11px] font-medium">Sabjii Coins</div>
+        </Link>
         <div className="rounded-2xl bg-white/10 py-2">
           <div className="text-lg font-bold">{since || '–'}</div>
           <div className="text-[11px] text-white/75">Member since</div>

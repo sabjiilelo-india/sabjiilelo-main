@@ -15,6 +15,8 @@ import type {
   UnitType,
   UserStatus,
 } from './enums';
+import type { DeliveryEta } from './delivery';
+import type { Nutrition } from './nutrition';
 
 /** Response shapes shared by the API and both clients. Dates are ISO strings, days are "YYYY-MM-DD". */
 
@@ -48,6 +50,9 @@ export interface AuthResponse {
 
 export interface Area extends AreaRef {
   isActive: boolean;
+  /** Store location; with a customer's pin it gives the delivery estimate. */
+  lat: number | null;
+  lng: number | null;
   minOrderPaise: number;
   deliveryFeePaise: number;
   freeDeliveryAbovePaise: number;
@@ -109,6 +114,7 @@ export interface Item {
   gstRate: number;
   isActive: boolean;
   sourceNote: string | null;
+  nutrition: Nutrition | null;
   variants: Variant[];
 }
 
@@ -237,12 +243,21 @@ export interface Quote {
   subtotalPaise: number;
   discountPaise: number;
   deliveryFeePaise: number;
+  /** Cash-on-delivery fee, 0 unless the quote was asked for COD. */
+  codFeePaise: number;
+  coinsUsed: number;
+  coinDiscountPaise: number;
+  /** Customer's coin balance and the most they can use on this order. */
+  coinBalance: number;
+  maxCoinsUsable: number;
   totalPaise: number;
   meetsMinOrder: boolean;
   minOrderPaise: number;
   amountToFreeDeliveryPaise: number;
   coupon: { code: string; valid: boolean; message: string | null } | null;
   slots: SlotOption[];
+  /** Estimated hand-over time once the order is out for delivery. Absent when the location is unknown. */
+  eta: DeliveryEta | null;
 }
 
 export interface OrderItem {
@@ -322,8 +337,16 @@ export interface OrderDetail extends OrderSummary {
   } | null;
   slot: { id: string; label: string; startTime: string; endTime: string } | null;
   subtotalPaise: number;
+  /** Coupon and coin discounts together. */
   discountPaise: number;
   deliveryFeePaise: number;
+  codFeePaise: number;
+  coinsUsed: number;
+  /** The part of discountPaise paid with coins. */
+  coinDiscountPaise: number;
+  coinsEarned: number;
+  /** Delivery estimate from the store to the address, when both locations are known. */
+  eta: DeliveryEta | null;
   couponCode: string | null;
   codCollectedPaise: number | null;
   invoiceNo: string | null;
@@ -541,4 +564,19 @@ export interface Paginated<T> {
 
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: unknown };
+}
+
+export interface CoinTxn {
+  id: string;
+  type: 'EARN' | 'SPEND' | 'REFUND';
+  coins: number;
+  balanceAfter: number;
+  note: string | null;
+  orderNo: string | null;
+  createdAt: string;
+}
+
+export interface CoinSummary {
+  balance: number;
+  history: CoinTxn[];
 }

@@ -47,6 +47,7 @@ enum OrderStatus {
   PACKED
   ASSIGNED
   OUT_FOR_DELIVERY
+  ARRIVED
   DELIVERED
   PARTIALLY_DELIVERED
   CANCELLED
@@ -153,6 +154,9 @@ model Area {
   freeDeliveryAbovePaise Int      @default(29900)
   autoRefundLimitPaise   Int      @default(20000)
   demandBufferPct        Int      @default(10)
+  // Store / dispatch location, used to estimate delivery time from distance.
+  lat                    Float?
+  lng                    Float?
   invoiceFy              String   @default("")
   invoiceSeq             Int      @default(0)
   orderSeq               Int      @default(0)
@@ -198,6 +202,7 @@ model User {
   email         String?
   notifyOrders  Boolean    @default(true)
   notifyOffers  Boolean    @default(true)
+  coinBalance   Int        @default(0)
   deletedAt     DateTime?
   createdById   String?
   lastLoginAt   DateTime?
@@ -217,6 +222,7 @@ model User {
   issues           IssueReport[]
   riderCash        RiderCashDay[]        @relation("RiderCash")
   couponRedemption CouponRedemption[]
+  coinTxns         CoinTxn[]
 
   @@index([areaId, role])
 }
@@ -341,6 +347,8 @@ model Item {
   hsnCode     String?
   gstRate     Int      @default(0)
   sourceNote  String?
+  // Per-100g nutrition facts and benefits, shown on the item page.
+  nutrition   Json?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -493,6 +501,11 @@ model Order {
   subtotalPaise     Int
   discountPaise     Int           @default(0)
   deliveryFeePaise  Int           @default(0)
+  codFeePaise       Int           @default(0)
+  // discountPaise already includes coinDiscountPaise; this is the part paid with coins.
+  coinsUsed         Int           @default(0)
+  coinDiscountPaise Int           @default(0)
+  coinsEarned       Int           @default(0)
   totalPaise        Int
   finalPayablePaise Int
   paymentMode       PaymentMode
@@ -521,6 +534,7 @@ model Order {
   rating     Rating?
   issues     IssueReport[]
   redemption CouponRedemption?
+  coinTxns   CoinTxn[]
 
   @@index([areaId, slotDate, status])
   @@index([customerId, createdAt])
@@ -726,4 +740,28 @@ model RiderCashDay {
   area             Area       @relation(fields: [areaId], references: [id])
 
   @@unique([riderId, date])
+}
+
+// ---------------------------------------------------------------- coins
+
+enum CoinTxnType {
+  EARN
+  SPEND
+  REFUND
+}
+
+/** Ledger of Sabjii Coins. 1 coin = Rs 1 at checkout. coinBalance on User is the running total. */
+model CoinTxn {
+  id           String      @id @default(cuid())
+  userId       String
+  orderId      String?
+  type         CoinTxnType
+  coins        Int
+  balanceAfter Int
+  note         String?
+  createdAt    DateTime    @default(now())
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order        Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
 }

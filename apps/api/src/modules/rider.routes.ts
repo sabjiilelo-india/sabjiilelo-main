@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma';
 import { body, param, parse, q } from '../lib/http';
 import { forbidden } from '../lib/errors';
 import { authenticate, me, requireRole } from '../middleware/auth';
-import { loadOrder, orderSummaryInclude, riderDeliver, riderStart, toOrderDetail, toOrderSummary, type Actor } from '../services/orders';
+import { loadOrder, orderSummaryInclude, riderArrived, riderDeliver, riderStart, toOrderDetail, toOrderSummary, type Actor } from '../services/orders';
 
 /** Delivery partner app. */
 export const riderRouter = Router();
@@ -28,7 +28,7 @@ riderRouter.get('/orders', async (req, res) => {
   const where: Prisma.OrderWhereInput =
     q(req, 'scope') === 'done'
       ? { riderId, status: { in: ['DELIVERED', 'PARTIALLY_DELIVERED', 'CANCELLED'] }, slotDate: ymdToDate(date) }
-      : { riderId, status: { in: ['ASSIGNED', 'OUT_FOR_DELIVERY'] } };
+      : { riderId, status: { in: ['ASSIGNED', 'OUT_FOR_DELIVERY', 'ARRIVED'] } };
   const rows = await prisma.order.findMany({
     where,
     include: orderSummaryInclude,
@@ -45,6 +45,10 @@ riderRouter.get('/orders/:id', async (req, res) => {
 
 riderRouter.post('/orders/:id/start', async (req, res) => {
   res.json(toOrderDetail(await riderStart(param(req, 'id'), actor(req))));
+});
+
+riderRouter.post('/orders/:id/arrived', async (req, res) => {
+  res.json(toOrderDetail(await riderArrived(param(req, 'id'), actor(req))));
 });
 
 riderRouter.post('/orders/:id/deliver', async (req, res) => {

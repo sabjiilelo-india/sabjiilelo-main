@@ -52,6 +52,8 @@ export function toArea(a: AreaFull): Area {
     freeDeliveryAbovePaise: a.freeDeliveryAbovePaise,
     autoRefundLimitPaise: a.autoRefundLimitPaise,
     demandBufferPct: a.demandBufferPct,
+    lat: a.lat,
+    lng: a.lng,
     pincodes: a.pincodes.map((p) => p.pincode),
     admin: a.users[0] ?? null,
     createdAt: a.createdAt.toISOString(),
@@ -111,6 +113,7 @@ export function toItem(i: ItemFull, opts: { activeVariantsOnly?: boolean } = {})
     gstRate: i.gstRate,
     isActive: i.isActive,
     sourceNote: i.sourceNote,
+    nutrition: (i.nutrition as Item['nutrition']) ?? null,
     variants: i.variants
       .filter((v) => !opts.activeVariantsOnly || v.isActive)
       .map((v) => ({ id: v.id, label: v.label, baseQty: v.baseQty, pricePaise: v.pricePaise, mrpPaise: v.mrpPaise, isActive: v.isActive })),

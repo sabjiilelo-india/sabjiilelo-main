@@ -1,6 +1,7 @@
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, useEffect, useRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -190,11 +191,80 @@ const STATUS_TONE: Record<OrderStatus, Tone> = {
   PACKED: 'orange',
   ASSIGNED: 'orange',
   OUT_FOR_DELIVERY: 'orange',
+  ARRIVED: 'orange',
   DELIVERED: 'green',
   PARTIALLY_DELIVERED: 'green',
   CANCELLED: 'red',
 };
 export const StatusBadge = ({ status }: { status: OrderStatus }) => <Badge label={ORDER_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />;
+
+/** Soft pulsing placeholder shown while content loads. */
+export function Skeleton({ width, height, radius: r = 12, style }: { width?: number | `${number}%`; height: number; radius?: number; style?: StyleProp<ViewStyle> }) {
+  const opacity = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.55, duration: 750, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+  return <Animated.View style={[{ width: width ?? '100%', height, borderRadius: r, backgroundColor: colors.beige, opacity }, style]} />;
+}
+
+/** Placeholder for a two-column product grid. */
+export function SkeletonGrid({ width, rows = 2 }: { width: number; rows?: number }) {
+  const cardW = (width - 16 * 2 - 12) / 2;
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+      {Array.from({ length: rows * 2 }).map((_, i) => (
+        <View key={i} style={[s.card, { width: cardW, padding: 8 }]}>
+          <Skeleton height={(cardW - 16) * 0.78} radius={14} />
+          <Skeleton height={12} width="60%" style={{ marginTop: 10 }} />
+          <Skeleton height={14} style={{ marginTop: 8 }} />
+          <Skeleton height={34} width="50%" style={{ marginTop: 12 }} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Placeholder rows for a list of cards (orders, notifications). */
+export function SkeletonList({ count = 4, height = 76 }: { count?: number; height?: number }) {
+  return (
+    <View style={{ gap: 10 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} height={height} radius={radius.lg} />
+      ))}
+    </View>
+  );
+}
+
+/** Small Sabjii Coins balance pill. */
+export function CoinChip({ coins, onPress, light }: { coins: number; onPress?: () => void; light?: boolean }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        alignSelf: 'flex-start',
+        backgroundColor: light ? 'rgba(255,255,255,0.18)' : '#fff3d6',
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      <Text style={{ fontSize: 14 }}>🪙</Text>
+      <Text style={{ fontFamily: font.semibold, fontSize: 13, color: light ? '#fff' : '#8a5a00' }}>{coins} coins</Text>
+    </Pressable>
+  );
+}
 
 export function Loader() {
   return (
