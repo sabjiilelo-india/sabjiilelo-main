@@ -31,6 +31,20 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         const saved = JSON.parse(raw) as { area: AreaRef; pincode: string };
         setArea(saved.area);
         setPincode(saved.pincode);
+        // The saved area can be stale (database moved, area re-created): follow the pincode to the current one.
+        api.catalog
+          .serviceability(saved.pincode)
+          .then((r) => {
+            if (!r.serviceable || !r.area) {
+              setArea(null);
+              setPincode(null);
+              storage.remove(KEY).catch(() => undefined);
+            } else if (r.area.id !== saved.area?.id) {
+              setArea(r.area);
+              storage.set(KEY, JSON.stringify({ area: r.area, pincode: saved.pincode })).catch(() => undefined);
+            }
+          })
+          .catch(() => undefined);
       })
       .catch(() => undefined)
       .finally(() => setReady(true));

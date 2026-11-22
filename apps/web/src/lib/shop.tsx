@@ -52,6 +52,20 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // The saved area can be stale (the database moved, an area was re-created). Re-check it once on load:
+  // follow the pincode to the current area, or forget it if we no longer deliver there.
+  useEffect(() => {
+    const saved = readSaved();
+    if (!saved?.pincode) return;
+    api.catalog
+      .serviceability(saved.pincode)
+      .then((r) => {
+        if (!r.serviceable || !r.area) clearLocation();
+        else if (r.area.id !== saved.area?.id) setLocation(r.area, saved.pincode);
+      })
+      .catch(() => undefined); // offline: keep what we have
+  }, [setLocation, clearLocation]);
+
   // A returning customer with a saved address starts in that address's area.
   const addresses = useQuery({
     queryKey: qk.addresses,
